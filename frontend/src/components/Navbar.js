@@ -1,143 +1,33 @@
+
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import Image from "next/image";
+import Image from 'next/image';
 
-const expeditionCategories = [
-  {
-    id: 'everest',
-    name: 'Everest Region',
-    tagline: 'Roof of the World',
-    subs: [
-      { name: 'Everest Base Camp Trek', href: '/treks/everest-base-camp' },
-      { name: 'Everest Three Passes', href: '/treks/everest-three-passes' },
-      { name: 'Gokyo Lakes Trek', href: '/treks/gokyo-lakes' },
-      { name: 'Everest View Trek', href: '/treks/everest-view' },
-      { name: 'Island Peak Climbing', href: '/treks/island-peak' },
-    ],
-    promos: [
-      {
-        name: 'Everest Base Camp',
-        subtitle: '5,364m · 14 Days',
-        img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/everest-base-camp',
-      },
-      {
-        name: 'Gokyo Ri Sunrise',
-        subtitle: '5,357m · 12 Days',
-        img: 'https://images.unsplash.com/photo-1544986581-efac024faf62?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/gokyo-lakes',
-      },
-    ],
-  },
-  {
-    id: 'annapurna',
-    name: 'Annapurna Region',
-    tagline: 'Sanctuary of Giants',
-    subs: [
-      { name: 'Annapurna Circuit', href: '/treks/annapurna-circuit' },
-      { name: 'Annapurna Base Camp', href: '/treks/annapurna-base-camp' },
-      { name: 'Poon Hill Trek', href: '/treks/poon-hill' },
-      { name: 'Mardi Himal Trek', href: '/treks/mardi-himal' },
-      { name: 'Khopra Ridge Trek', href: '/treks/khopra-ridge' },
-    ],
-    promos: [
-      {
-        name: 'Annapurna Circuit',
-        subtitle: '5,416m · 16 Days',
-        img: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/annapurna-circuit',
-      },
-      {
-        name: 'Annapurna Sanctuary',
-        subtitle: '4,130m · 10 Days',
-        img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/annapurna-base-camp',
-      },
-    ],
-  },
-  {
-    id: 'langtang',
-    name: 'Langtang Region',
-    tagline: 'Valley of Glaciers',
-    subs: [
-      { name: 'Langtang Valley Trek', href: '/treks/langtang-valley' },
-      { name: 'Gosaikunda Lake Trek', href: '/treks/gosaikunda' },
-      { name: 'Tamang Heritage Trail', href: '/treks/tamang-heritage' },
-      { name: 'Helambu Circuit', href: '/treks/helambu-circuit' },
-    ],
-    promos: [
-      {
-        name: 'Langtang Valley',
-        subtitle: '3,870m · 8 Days',
-        img: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/langtang-valley',
-      },
-      {
-        name: 'Gosaikunda Lakes',
-        subtitle: '4,380m · 9 Days',
-        img: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/gosaikunda',
-      },
-    ],
-  },
-  {
-    id: 'manaslu',
-    name: 'Manaslu Region',
-    tagline: 'The Hidden Giant',
-    subs: [
-      { name: 'Manaslu Circuit Trek', href: '/treks/manaslu-circuit' },
-      { name: 'Tsum Valley Trek', href: '/treks/tsum-valley' },
-      { name: 'Manaslu Base Camp', href: '/treks/manaslu-base-camp' },
-    ],
-    promos: [
-      {
-        name: 'Manaslu Circuit',
-        subtitle: '5,106m · 15 Days',
-        img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/manaslu-circuit',
-      },
-      {
-        name: 'Tsum Valley',
-        subtitle: '3,700m · 12 Days',
-        img: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/tsum-valley',
-      },
-    ],
-  },
-  {
-    id: 'mustang',
-    name: 'Mustang & Dolpo',
-    tagline: 'The Forbidden Kingdom',
-    subs: [
-      { name: 'Upper Mustang Trek', href: '/treks/upper-mustang' },
-      { name: 'Lower Dolpo Trek', href: '/treks/lower-dolpo' },
-      { name: 'Shey Gompa Trek', href: '/treks/shey-gompa' },
-    ],
-    promos: [
-      {
-        name: 'Upper Mustang',
-        subtitle: '3,800m · 11 Days',
-        img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/upper-mustang',
-      },
-      {
-        name: 'Lower Dolpo',
-        subtitle: '5,200m · 18 Days',
-        img: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?q=80&w=800&auto=format&fit=crop',
-        href: '/treks/lower-dolpo',
-      },
-    ],
-  },
-];
+// NEXT_PUBLIC_API_URL should already end in /api (same var page.js uses)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+// The API can return `subs: []` (e.g. Everest) while still having promos,
+// so we merge both into one de-duplicated list of links for the centre column.
+const getTrekLinks = (category) => {
+  const seen = new Set();
+  const links = [];
+  [...(category.subs || []), ...(category.promos || [])].forEach((t) => {
+    if (!t?.href || seen.has(t.href)) return;
+    seen.add(t.href);
+    links.push({ name: (t.name || '').trim(), href: t.href });
+  });
+  return links;
+};
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(expeditionCategories[0].id);
+  const [categories, setCategories] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(null);
   const closeTimer = useRef(null);
 
   useEffect(() => {
@@ -146,7 +36,26 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Load expeditions from the API
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/nav/expeditions`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const list = Array.isArray(json.data) ? json.data : [];
+        setCategories(list);
+        setActiveCategory((prev) => prev ?? list[0]?.id ?? null);
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Failed to load expeditions:', err);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
   const openMega = () => {
+    if (!categories.length) return; // nothing to show yet
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setMegaOpen(true);
   };
@@ -156,7 +65,8 @@ export default function Navbar() {
   };
 
   const activeData =
-    expeditionCategories.find((c) => c.id === activeCategory) || expeditionCategories[0];
+    categories.find((c) => c.id === activeCategory) || categories[0] || null;
+  const activeLinks = activeData ? getTrekLinks(activeData) : [];
 
   return (
     <>
@@ -197,14 +107,14 @@ export default function Navbar() {
           gap: 12px;
           text-decoration: none;
         }
-        
+
         .ht-logo-mark {
           width: 82px;
           height: 82px;
           object-fit: contain;
           flex-shrink: 0;
         }
-        
+
         .ht-logo-name {
           font-family: var(--font-display);
           font-size: 1.5rem;
@@ -214,7 +124,7 @@ export default function Navbar() {
           line-height: 1;
           display: block;
         }
-        
+
         .ht-logo-sub {
           font-size: 0.6rem;
           font-weight: 400;
@@ -270,23 +180,23 @@ export default function Navbar() {
           position: relative;
           overflow: hidden;
           cursor: pointer;
-        
+
           padding: 0.75rem 1.8rem;
           border: 1px solid var(--gold);
           border-radius: 999px; /* Fully rounded */
-        
+
           background: transparent; /* No background */
           color: #fff;
-        
+
           font-size: 0.7rem;
           font-weight: 500;
           letter-spacing: 0.12em;
           text-transform: uppercase;
           text-decoration: none;
-        
+
           transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        
+
         .ht-btn-primary::before {
           content: "";
           position: absolute;
@@ -295,23 +205,23 @@ export default function Navbar() {
           transform: translateX(-101%);
           transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        
+
         .ht-btn-primary:hover::before {
           transform: translateX(0);
         }
-        
+
         .ht-btn-primary span {
           position: relative;
           z-index: 1;
           color: #fff;
         }
-        
+
         .ht-btn-primary:hover {
           border-color: #fff;
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
-        
+
         .ht-btn-primary:hover span {
           color: #fff;
         }
@@ -502,6 +412,11 @@ export default function Navbar() {
           opacity: 1;
           transform: scale(1.3);
         }
+        .ht-mega-empty {
+          font-size: 0.8rem;
+          color: rgba(250,250,248,0.45);
+          font-style: italic;
+        }
         .ht-mega-view-all {
           display: inline-flex; align-items: center; gap: 0.6rem;
           margin-top: 2rem;
@@ -535,6 +450,10 @@ export default function Navbar() {
           width: 100%; height: 100%;
           object-fit: cover;
           transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+        }
+        .ht-mega-promo-fallback {
+          position: absolute; inset: 0;
+          background: linear-gradient(135deg, #223269 0%, #0D1117 100%);
         }
         .ht-mega-promo-card:hover .ht-mega-promo-img { transform: scale(1.08); }
         .ht-mega-promo-gradient {
@@ -585,21 +504,21 @@ export default function Navbar() {
 
       <nav className={`ht-navbar${scrolled ? ' scrolled' : ''}`}>
         {/* Logo */}
-      <Link href="/" className="ht-logo">
-        <Image
-          src="/newLOgofor-removebg-preview.png"
-          alt="Himalaya Legacy Logo"
-          width={100}
-          height={100}
-          className="ht-logo-mark"
-          priority
-        />
-      
-        <div>
-          <span className="ht-logo-name">Himalaya Legacy</span>
-          {/* <span className="ht-logo-sub">Est. 2009 · Nepal</span> */}
-        </div>
-      </Link>
+        <Link href="/" className="ht-logo">
+          <Image
+            src="/newLOgofor-removebg-preview.png"
+            alt="Himalaya Legacy Logo"
+            width={100}
+            height={100}
+            className="ht-logo-mark"
+            priority
+          />
+
+          <div>
+            <span className="ht-logo-name">Himalaya Legacy</span>
+            {/* <span className="ht-logo-sub">Est. 2009 · Nepal</span> */}
+          </div>
+        </Link>
 
         {/* Desktop Links */}
         <ul className="ht-nav-links">
@@ -672,89 +591,101 @@ export default function Navbar() {
       </nav>
 
       {/* ═══ MEGA MENU — EXPEDITIONS ═══ */}
-      <div
-        className={`ht-mega-wrap${megaOpen ? ' open' : ''}`}
-        style={{ top: scrolled ? '80px' : '100px' }}
-        onMouseEnter={openMega}
-        onMouseLeave={scheduleClose}
-      >
-        <div className="ht-mega-inner">
-          {/* LEFT — Categories */}
-          <div className="ht-mega-categories">
-            <span className="ht-mega-col-label">Explore By Region 1</span>
-            {expeditionCategories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                className={`ht-mega-cat-btn${cat.id === activeCategory ? ' active' : ''}`}
-                onMouseEnter={() => setActiveCategory(cat.id)}
-                onFocus={() => setActiveCategory(cat.id)}
-              >
-                <span>
-                  <span className="ht-mega-cat-name">{cat.name}</span>
-                  <span className="ht-mega-cat-tagline">{cat.tagline}</span>
-                </span>
-                <svg className="ht-mega-cat-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            ))}
-          </div>
-
-          {/* CENTER — Sub-expeditions for active category */}
-          <div className="ht-mega-subs">
-            <h3 className="ht-mega-subs-heading">
-              <b>{activeData.name}</b> Treks
-            </h3>
-            <p className="ht-mega-subs-sub">{activeData.tagline}</p>
-            <ul className="ht-mega-sub-list">
-              {activeData.subs.map((sub) => (
-                <li key={sub.href}>
-                  <Link href={sub.href} onClick={() => setMegaOpen(false)}>
-                    {sub.name}
-                  </Link>
-                </li>
+      {activeData && (
+        <div
+          className={`ht-mega-wrap${megaOpen ? ' open' : ''}`}
+          style={{ top: scrolled ? '80px' : '100px' }}
+          onMouseEnter={openMega}
+          onMouseLeave={scheduleClose}
+        >
+          <div className="ht-mega-inner">
+            {/* LEFT — Categories */}
+            <div className="ht-mega-categories">
+              <span className="ht-mega-col-label">Explore By Region</span>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`ht-mega-cat-btn${cat.id === activeData.id ? ' active' : ''}`}
+                  onMouseEnter={() => setActiveCategory(cat.id)}
+                  onFocus={() => setActiveCategory(cat.id)}
+                >
+                  <span>
+                    <span className="ht-mega-cat-name">{cat.name}</span>
+                    <span className="ht-mega-cat-tagline">{cat.tagline}</span>
+                  </span>
+                  <svg className="ht-mega-cat-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
               ))}
-            </ul>
-            <Link
-              href={`/treks?region=${activeData.id}`}
-              className="ht-mega-view-all"
-              onClick={() => setMegaOpen(false)}
-            >
-              View All {activeData.name} Treks
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
-          </div>
+            </div>
 
-          {/* RIGHT — Promo Cards */}
-          <div className="ht-mega-promos">
-            {activeData.promos.map((promo) => (
+            {/* CENTER — Treks for active category */}
+            <div className="ht-mega-subs">
+              <h3 className="ht-mega-subs-heading">
+                <b>{activeData.name}</b> Treks
+              </h3>
+              <p className="ht-mega-subs-sub">{activeData.tagline}</p>
+
+              {activeLinks.length > 0 ? (
+                <ul className="ht-mega-sub-list">
+                  {activeLinks.map((sub) => (
+                    <li key={sub.href}>
+                      <Link href={sub.href} onClick={() => setMegaOpen(false)}>
+                        {sub.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ht-mega-empty">New treks in this region coming soon.</p>
+              )}
+
               <Link
-                key={promo.name}
-                href={promo.href}
-                className="ht-mega-promo-card"
+                href={`/treks?region=${activeData.id}`}
+                className="ht-mega-view-all"
                 onClick={() => setMegaOpen(false)}
               >
-                <img className="ht-mega-promo-img" src={promo.img} alt={promo.name} />
-                <div className="ht-mega-promo-gradient" />
-                <div className="ht-mega-promo-body">
-                  <div>
-                    <div className="ht-mega-promo-name">{promo.name}</div>
-                    <span className="ht-mega-promo-sub">{promo.subtitle}</span>
-                  </div>
-                  <span className="ht-mega-promo-cta">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                </div>
+                View All {activeData.name} Treks
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </Link>
-            ))}
+            </div>
+
+            {/* RIGHT — Promo Cards */}
+            <div className="ht-mega-promos">
+              {(activeData.promos || []).map((promo) => (
+                <Link
+                  key={promo.href}
+                  href={promo.href}
+                  className="ht-mega-promo-card"
+                  onClick={() => setMegaOpen(false)}
+                >
+                  {promo.img ? (
+                    <img className="ht-mega-promo-img" src={promo.img} alt={(promo.name || '').trim()} loading="lazy" />
+                  ) : (
+                    <div className="ht-mega-promo-fallback" />
+                  )}
+                  <div className="ht-mega-promo-gradient" />
+                  <div className="ht-mega-promo-body">
+                    <div>
+                      <div className="ht-mega-promo-name">{(promo.name || '').trim()}</div>
+                      <span className="ht-mega-promo-sub">{promo.subtitle}</span>
+                    </div>
+                    <span className="ht-mega-promo-cta">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

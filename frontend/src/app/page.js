@@ -1,5 +1,4 @@
 
- 
 import Link from 'next/link';
 import TrekCard from '@/components/TrekCard';
 import './home.css';
@@ -25,13 +24,36 @@ const truncate = (text = '', max) =>
   text.length <= max ? text : text.slice(0, max).replace(/\s+\S*$/, '') + '…';
 
 // ─── Static content ───
-const POPULAR_TREKS = [
-  { name: 'Everest Base Camp', slug: 'everest-base-camp', elev: '5,364m', colors: ['#E9C9A3', '#A6794F', '#3a2a08'], sky: '#0A2A20' },
-  { name: 'Annapurna Circuit', slug: 'annapurna-circuit', elev: '5,416m', colors: ['#dce9dc', '#6f9c80', '#1c3a2a'], sky: '#5c3a1e' },
-  { name: 'Langtang Valley', slug: 'langtang-valley', elev: '3,870m', colors: ['#a8d8a8', '#5a8a5a', '#1a3a1a'], sky: '#081408' },
-  { name: 'Manaslu Circuit', slug: 'manaslu-circuit', elev: '5,106m', colors: ['#f0ddc0', '#b88a52', '#3a2410'], sky: '#0e0f18' },
-  { name: 'Upper Mustang', slug: 'upper-mustang', elev: '3,800m', colors: ['#f0a060', '#c05820', '#4a2010'], sky: '#100808' },
+
+// Palettes for the little SVG mountain thumbnails (cycled by index).
+const MOUNTAIN_PALETTES = [
+  { colors: ['#E9C9A3', '#A6794F', '#3a2a08'], sky: '#0A2A20' },
+  { colors: ['#dce9dc', '#6f9c80', '#1c3a2a'], sky: '#5c3a1e' },
+  { colors: ['#a8d8a8', '#5a8a5a', '#1a3a1a'], sky: '#081408' },
+  { colors: ['#f0ddc0', '#b88a52', '#3a2410'], sky: '#0e0f18' },
+  { colors: ['#f0a060', '#c05820', '#4a2010'], sky: '#100808' },
 ];
+
+// Flatten the expedition promos into a de-duplicated quick-link list.
+// subtitle looks like "5,364m · 14 Days" → elevation is the part before "·".
+function buildPopularTreks(categories = []) {
+  const seen = new Set();
+  const treks = [];
+  categories.forEach((cat) => {
+    (cat.promos || []).forEach((p) => {
+      if (!p?.href || seen.has(p.href)) return;
+      seen.add(p.href);
+      const i = treks.length;
+      treks.push({
+        name: (p.name || '').trim(),
+        href: p.href,
+        elev: (p.subtitle || '').split('·')[0].trim(),
+        ...MOUNTAIN_PALETTES[i % MOUNTAIN_PALETTES.length],
+      });
+    });
+  });
+  return treks;
+}
 
 const HERO_STATS = [
   { num: '500+', label: 'Treks Completed' },
@@ -98,10 +120,13 @@ function Mountain({ id, colors: [top, mid, base], sky }) {
 
 // ─── Page ───
 export default async function HomePage() {
-  const [featuredTreks, homepageTrek] = await Promise.all([
+  const [featuredTreks, homepageTrek, expeditions] = await Promise.all([
     api('/treks?featured=true&limit=8', 3600, []),
     api('/treks/homepage', 0, null),
+    api('/nav/expeditions', 3600, []),
   ]);
+
+  const popularTreks = buildPopularTreks(expeditions);
 
   // No repeats: first 4 → level grid, next 4 → "More Featured Treks".
   const levelTreks = featuredTreks.slice(0, 4);
@@ -150,40 +175,44 @@ export default async function HomePage() {
       </section>
 
       {/* QUICK LINKS — desktop chips */}
-      <div className="trek-strip">
-        <div className="trek-chips">
-          {POPULAR_TREKS.slice(0, 4).map((t) => (
-            <Link key={t.slug} href={`/treks/${t.slug}`} className="trek-chip">
-              <i>▲</i><b>{t.name}</b><span>{t.elev}</span>
-            </Link>
-          ))}
+      {popularTreks.length > 0 && (
+        <div className="trek-strip">
+          <div className="trek-chips">
+            {popularTreks.slice(0, 4).map((t) => (
+              <Link key={t.href} href={t.href} className="trek-chip">
+                <i>▲</i><b>{t.name}</b><span>{t.elev}</span>
+              </Link>
+            ))}
+          </div>
+          <Link href="/treks" className="strip-link">All Treks →</Link>
         </div>
-        <Link href="/treks" className="strip-link">All Treks →</Link>
-      </div>
+      )}
 
       {/* QUICK LINKS — mobile stories */}
-      <div className="stories-strip" aria-label="Popular treks">
-        <div className="stories-label">Quick Explore</div>
-        <div className="stories-row">
-          {POPULAR_TREKS.map((t, i) => (
-            <Link key={t.slug} href={`/treks/${t.slug}`} className="story-card" aria-label={`${t.name} trek`}>
-              <div className="story-ring">
-                <div className="story-inner">
-                  <Mountain id={i} colors={t.colors} sky={t.sky} />
-                  <span className="story-badge">{t.elev}</span>
+      {popularTreks.length > 0 && (
+        <div className="stories-strip" aria-label="Popular treks">
+          <div className="stories-label">Quick Explore</div>
+          <div className="stories-row">
+            {popularTreks.map((t, i) => (
+              <Link key={t.href} href={t.href} className="story-card" aria-label={`${t.name} trek`}>
+                <div className="story-ring">
+                  <div className="story-inner">
+                    <Mountain id={i} colors={t.colors} sky={t.sky} />
+                    <span className="story-badge">{t.elev}</span>
+                  </div>
                 </div>
+                <span className="story-name">{t.name}</span>
+              </Link>
+            ))}
+            <Link href="/treks" className="story-card story-all" aria-label="Browse all treks">
+              <div className="story-ring">
+                <div className="story-inner"><Arrow size={28} d="M4 8h8M9 4l4 4-4 4" /></div>
               </div>
-              <span className="story-name">{t.name}</span>
+              <span className="story-name">All Treks</span>
             </Link>
-          ))}
-          <Link href="/treks" className="story-card story-all" aria-label="Browse all treks">
-            <div className="story-ring">
-              <div className="story-inner"><Arrow size={28} d="M4 8h8M9 4l4 4-4 4" /></div>
-            </div>
-            <span className="story-name">All Treks</span>
-          </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* FEATURED TREKS */}
       <section className="featured-section">
