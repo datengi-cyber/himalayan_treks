@@ -8,7 +8,7 @@ export const metadata = {
   description:
     'Book iconic Nepal treks — Everest Base Camp, Annapurna Circuit, Langtang Valley. Expert guides, small groups, unbeatable prices.',
 };
-
+export const dynamic = 'force-dynamic';
 // ─── Data helpers ───
 async function api(path, revalidate, fallback) {
   try {
