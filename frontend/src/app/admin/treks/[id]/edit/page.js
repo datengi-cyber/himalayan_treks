@@ -1,14 +1,736 @@
+// 'use client';
+
+// import { useState, useEffect, useRef } from 'react';
+// import { useRouter, useParams } from 'next/navigation';
+// import Image from 'next/image';
+// import api from '@/lib/api';
+
+// const difficulties = ['easy', 'moderate', 'challenging', 'extreme'];
+// const regions = ['Everest', 'Annapurna', 'Langtang', 'Manaslu', 'Mustang', 'Other'];
+
+
+
+// // ── Reusable form field components ──────────────────────────
+// function FormField({ label, hint, children }) {
+//   return (
+//     <div>
+//       <label className="block text-sm font-semibold text-gray-700 mb-1">
+//         {label}
+//         {hint && <span className="text-gray-400 font-normal ml-1">{hint}</span>}
+//       </label>
+//       {children}
+//     </div>
+//   );
+// }
+
+// function SectionCard({ title, children }) {
+//   return (
+//     <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+//       <h2 className="text-lg font-bold text-gray-900 border-b pb-3">{title}</h2>
+//       {children}
+//     </div>
+//   );
+// }
+
+// // ── Main Page ────────────────────────────────────────────────
+// export default function EditTrekPage() {
+//   const router = useRouter();
+//   const { id } = useParams();
+
+//   const [form, setForm] = useState({
+//     title: '', slug: '', description: '', region: '',
+//     difficulty: 'moderate', duration_days: '', max_altitude: '',
+//     distance_km: '', price: '', discount_price: '',
+//     max_group_size: 12, min_group_size: 1,
+//     start_location: '', end_location: '',
+//     is_featured: false, is_active: true,
+//     meta_title: '', meta_description: '',
+//     highlights: '',
+//   });
+
+//   const [existingImages, setExistingImages] = useState([]);
+//   const [newImages, setNewImages]           = useState([]);
+//   const [coverIndex, setCoverIndex]         = useState(null);
+//   const [loading, setLoading]               = useState(true);
+//   const [saving, setSaving]                 = useState(false);
+//   const [uploadingImages, setUploadingImages] = useState(false);
+//   const [error, setError]                   = useState('');
+//   const [success, setSuccess]               = useState('');
+
+//   // ── Gallery images state ───────────────────────────────────
+//   const [galleryImages, setGalleryImages] = useState([]); // [{ id, file, preview }]
+//   const [draggingId, setDraggingId]       = useState(null);
+//   const galleryInputRef = useRef(null);
+//   const dragIndexRef    = useRef(null); // tracks index currently being dragged
+
+//   // ── Load existing trek data ────────────────────────────────
+//   useEffect(() => {
+//     async function loadTrek() {
+//       try {
+//         const [trekRes, imagesRes] = await Promise.all([
+//           api.get(`/treks/id/${id}`),           // get by ID — we'll add this endpoint
+//           api.get(`/images/trek/${id}`),
+//         ]);
+
+//         const trek = trekRes.data.data;
+//         setForm({
+//           title:            trek.title           || '',
+//           slug:             trek.slug            || '',
+//           description:      trek.description     || '',
+//           region:           trek.region          || '',
+//           difficulty:       trek.difficulty      || 'moderate',
+//           duration_days:    trek.duration_days   || '',
+//           max_altitude:     trek.max_altitude    || '',
+//           distance_km:      trek.distance_km     || '',
+//           price:            trek.price           || '',
+//           discount_price:   trek.discount_price  || '',
+//           max_group_size:   trek.max_group_size  || 12,
+//           min_group_size:   trek.min_group_size  || 1,
+//           start_location:   trek.start_location  || '',
+//           end_location:     trek.end_location    || '',
+//           is_featured:      trek.is_featured     || false,
+//           is_active:        trek.is_active       !== false,
+//           meta_title:       trek.meta_title      || '',
+//           meta_description: trek.meta_description || '',
+//           highlights: Array.isArray(trek.highlights)
+//             ? trek.highlights.join('\n')
+//             : '',
+//         });
+
+//         setExistingImages(imagesRes.data.data || []);
+//       } catch (err) {
+//         setError('Failed to load trek data.');
+//         console.error(err);
+//       } finally {
+//         setLoading(false);
+//       }
+//     }
+
+//     if (id) loadTrek();
+//   }, [id]);
+
+//   // ── Clean up gallery preview object URLs on unmount ────────
+//   useEffect(() => {
+//     return () => {
+//       galleryImages.forEach(img => URL.revokeObjectURL(img.preview));
+//     };
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
+
+//   // ── Gallery image handlers ──────────────────────────────────
+//   const handleGalleryChange = (e) => {
+//     const files = Array.from(e.target.files || []);
+//     if (files.length === 0) return;
+
+//     const newItems = files.map((file, i) => ({
+//       id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+//       file,
+//       preview: URL.createObjectURL(file),
+//     }));
+
+//     setGalleryImages(prev => [...prev, ...newItems]);
+//     // reset input so selecting the same file again still fires onChange
+//     e.target.value = '';
+//   };
+
+//   const removeGalleryImage = (imgId) => {
+//     setGalleryImages(prev => {
+//       const target = prev.find(img => img.id === imgId);
+//       if (target) URL.revokeObjectURL(target.preview);
+//       return prev.filter(img => img.id !== imgId);
+//     });
+//   };
+
+//   const moveGalleryImage = (index, direction) => {
+//     setGalleryImages(prev => {
+//       const newIndex = index + direction;
+//       if (newIndex < 0 || newIndex >= prev.length) return prev;
+//       const updated = [...prev];
+//       [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+//       return updated;
+//     });
+//   };
+
+//   const handleDragStart = (index) => {
+//     dragIndexRef.current = index;
+//     setDraggingId(galleryImages[index]?.id ?? null);
+//   };
+
+//   const handleDragEnter = (index) => {
+//     const dragIndex = dragIndexRef.current;
+//     if (dragIndex === null || dragIndex === index) return;
+
+//     setGalleryImages(prev => {
+//       const updated = [...prev];
+//       const [moved] = updated.splice(dragIndex, 1);
+//       updated.splice(index, 0, moved);
+//       return updated;
+//     });
+//     dragIndexRef.current = index;
+//   };
+
+//   const handleDragEnd = () => {
+//     dragIndexRef.current = null;
+//     setDraggingId(null);
+//   };
+
+//   // ── Handle save ───────────────────────────────────────────
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setSaving(true);
+//     setError('');
+//     setSuccess('');
+
+//     try {
+//       // 1. Update trek details
+//       await api.put(`/treks/${id}`, {
+//         ...form,
+//         duration_days:  parseInt(form.duration_days),
+//         max_altitude:   form.max_altitude  ? parseInt(form.max_altitude)    : null,
+//         distance_km:    form.distance_km   ? parseFloat(form.distance_km)   : null,
+//         price:          parseFloat(form.price),
+//         discount_price: form.discount_price ? parseFloat(form.discount_price) : null,
+//         highlights:     form.highlights
+//           ? form.highlights.split('\n').filter(Boolean)
+//           : null,
+//       });
+
+//       // 2. Upload new (cover-eligible) images if any
+//       if (newImages.length > 0) {
+//         setUploadingImages(true);
+//         for (let i = 0; i < newImages.length; i++) {
+//           const formData = new FormData();
+//           formData.append('image', newImages[i]);
+//           formData.append('is_cover', coverIndex === i ? 'true' : 'false');
+//           formData.append('sort_order', existingImages.length + i);
+//           await api.post(`/images/trek/${id}`, formData, {
+//             headers: { 'Content-Type': 'multipart/form-data' },
+//           });
+//         }
+//       }
+
+//       // 3. Upload gallery images if any
+//       // NOTE: assumes the backend accepts an `is_gallery` flag on this endpoint —
+//       // confirm with your API before relying on this in production.
+//       if (galleryImages.length > 0) {
+//         setUploadingImages(true);
+//         const baseSortOrder = existingImages.length + newImages.length;
+//         for (let i = 0; i < galleryImages.length; i++) {
+//           const formData = new FormData();
+//           formData.append('image', galleryImages[i].file);
+//           formData.append('is_cover', 'false');
+//           formData.append('is_gallery', 'true');
+//           formData.append('sort_order', baseSortOrder + i);
+//           await api.post(`/images/trek/${id}`, formData, {
+//             headers: { 'Content-Type': 'multipart/form-data' },
+//           });
+//         }
+//       }
+
+//       setSuccess('✅ Trek updated successfully!');
+//       setTimeout(() => router.push('/admin/treks'), 1500);
+//     } catch (err) {
+//       setError(err.response?.data?.message || 'Failed to update trek.');
+//     } finally {
+//       setSaving(false);
+//       setUploadingImages(false);
+//     }
+//   };
+
+//   // ── Delete existing image ──────────────────────────────────
+//   const deleteExistingImage = async (imageId) => {
+//     if (!confirm('Delete this image? This cannot be undone.')) return;
+//     try {
+//       await api.delete(`/images/trek/${imageId}`);
+//       setExistingImages(prev => prev.filter(img => img.id !== imageId));
+//     } catch (err) {
+//       alert('Failed to delete image.');
+//     }
+//   };
+
+//   // ── Set cover image ────────────────────────────────────────
+//   const setAsCover = async (imageId) => {
+//     try {
+//       await api.put(`/images/${id}/cover/${imageId}`);
+
+//       setExistingImages(prev =>
+//         prev.map(img => ({
+//           ...img,
+//           is_cover: img.id === imageId
+//         }))
+//       );
+//     } catch (err) {
+//       console.error(err);
+//     }
+//   };
+
+//   const set = (field) => (e) =>
+//     setForm(f => ({ ...f, [field]: e.target.value }));
+
+//   const setCheck = (field) => (e) =>
+//     setForm(f => ({ ...f, [field]: e.target.checked }));
+
+//   // ── Loading state ──────────────────────────────────────────
+//   if (loading) {
+//     return (
+//       <div className="flex items-center justify-center h-64">
+//         <div className="spinner" />
+//       </div>
+//     );
+//   }
+
+//   // ── Render ─────────────────────────────────────────────────
+//   return (
+//     <div className="max-w-4xl">
+//       {/* Header */}
+//       <div className="flex items-center justify-between mb-8">
+//         <div>
+//           <h1 className="text-3xl font-extrabold text-gray-900">Edit Trek</h1>
+//           <p className="text-gray-500 mt-1">{form.title}</p>
+//         </div>
+//         <button
+//           onClick={() => router.push('/admin/treks')}
+//           className="text-gray-500 hover:text-gray-700 font-medium px-4 py-2 border rounded-lg transition"
+//         >
+//           ← Back to Treks
+//         </button>
+//       </div>
+
+//       {/* Alerts */}
+//       {error && (
+//         <div className="alert-error mb-6">⚠️ {error}</div>
+//       )}
+//       {success && (
+//         <div className="alert-success mb-6">{success}</div>
+//       )}
+
+//       <form onSubmit={handleSubmit} className="space-y-8">
+
+//         {/* ── Basic Info ─────────────────────────────────── */}
+//         <SectionCard title="Basic Information">
+//           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+//             <div className="md:col-span-2">
+//               <FormField label="Trek Title *">
+//                 <input
+//                   type="text" required
+//                   className="input"
+//                   value={form.title}
+//                   onChange={(e) => {
+//                     const title = e.target.value;
+//                     const slug  = title.toLowerCase()
+//                       .replace(/[^a-z0-9]+/g, '-')
+//                       .replace(/(^-|-$)/g, '');
+//                     setForm(f => ({ ...f, title, slug }));
+//                   }}
+//                 />
+//               </FormField>
+//             </div>
+
+//             <FormField label="URL Slug *">
+//               <input
+//                 type="text" required
+//                 className="input bg-gray-50"
+//                 value={form.slug}
+//                 onChange={set('slug')}
+//               />
+//             </FormField>
+
+//             <FormField label="Region *">
+//               <select
+//                 required className="input"
+//                 value={form.region}
+//                 onChange={set('region')}
+//               >
+//                 <option value="">Select Region</option>
+//                 {regions.map(r => <option key={r} value={r}>{r}</option>)}
+//               </select>
+//             </FormField>
+
+//             <FormField label="Difficulty *">
+//               <select
+//                 className="input"
+//                 value={form.difficulty}
+//                 onChange={set('difficulty')}
+//               >
+//                 {difficulties.map(d => (
+//                   <option key={d} value={d} className="capitalize">
+//                     {d.charAt(0).toUpperCase() + d.slice(1)}
+//                   </option>
+//                 ))}
+//               </select>
+//             </FormField>
+
+//             <FormField label="Duration (days) *">
+//               <input
+//                 type="number" required min="1"
+//                 className="input"
+//                 value={form.duration_days}
+//                 onChange={set('duration_days')}
+//               />
+//             </FormField>
+
+//             <FormField label="Max Altitude (m)">
+//               <input
+//                 type="number"
+//                 className="input"
+//                 value={form.max_altitude}
+//                 onChange={set('max_altitude')}
+//                 placeholder="e.g. 5364"
+//               />
+//             </FormField>
+
+//             <FormField label="Distance (km)">
+//               <input
+//                 type="number" step="0.1"
+//                 className="input"
+//                 value={form.distance_km}
+//                 onChange={set('distance_km')}
+//               />
+//             </FormField>
+
+//             <FormField label="Price (USD) *">
+//               <input
+//                 type="number" required min="0" step="0.01"
+//                 className="input"
+//                 value={form.price}
+//                 onChange={set('price')}
+//               />
+//             </FormField>
+
+//             <FormField label="Discounted Price (optional)">
+//               <input
+//                 type="number" min="0" step="0.01"
+//                 className="input"
+//                 value={form.discount_price}
+//                 onChange={set('discount_price')}
+//               />
+//             </FormField>
+
+//             <FormField label="Max Group Size">
+//               <input
+//                 type="number" min="1"
+//                 className="input"
+//                 value={form.max_group_size}
+//                 onChange={set('max_group_size')}
+//               />
+//             </FormField>
+
+//             <FormField label="Start Location">
+//               <input
+//                 type="text"
+//                 className="input"
+//                 value={form.start_location}
+//                 onChange={set('start_location')}
+//                 placeholder="e.g. Lukla"
+//               />
+//             </FormField>
+
+//             <FormField label="End Location">
+//               <input
+//                 type="text"
+//                 className="input"
+//                 value={form.end_location}
+//                 onChange={set('end_location')}
+//                 placeholder="e.g. Kathmandu"
+//               />
+//             </FormField>
+
+//             {/* Toggles */}
+//             <div className="md:col-span-2 flex items-center gap-8 pt-2">
+//               <label className="flex items-center gap-3 cursor-pointer">
+//                 <input
+//                   type="checkbox"
+//                   className="w-4 h-4 text-emerald-600 rounded"
+//                   checked={form.is_featured}
+//                   onChange={setCheck('is_featured')}
+//                 />
+//                 <span className="text-sm font-semibold text-gray-700">
+//                   Feature on homepage
+//                 </span>
+//               </label>
+//               <label className="flex items-center gap-3 cursor-pointer">
+//                 <input
+//                   type="checkbox"
+//                   className="w-4 h-4 text-emerald-600 rounded"
+//                   checked={form.is_active}
+//                   onChange={setCheck('is_active')}
+//                 />
+//                 <span className="text-sm font-semibold text-gray-700">
+//                   Active (visible to public)
+//                 </span>
+//               </label>
+//             </div>
+//           </div>
+
+//           {/* Description */}
+//           <FormField label="Description *">
+//             <textarea
+//               required rows={6}
+//               className="input"
+//               value={form.description}
+//               onChange={set('description')}
+//               placeholder="Full description of the trek..."
+//             />
+//           </FormField>
+
+//           {/* Highlights */}
+//           <FormField label="Highlights" hint="(one per line)">
+//             <textarea
+//               rows={5}
+//               className="input"
+//               value={form.highlights}
+//               onChange={set('highlights')}
+//               placeholder={"Stand at Everest Base Camp 5,364m\nVisit Tengboche Monastery\nCross dramatic high passes"}
+//             />
+//           </FormField>
+//         </SectionCard>
+
+//         {/* ── Existing Images ─────────────────────────────── */}
+//         <SectionCard title="Current Images">
+//           {existingImages.length === 0 ? (
+//             <p className="text-gray-400 text-sm">No images uploaded yet.</p>
+//           ) : (
+//             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//               {existingImages.map(img => (
+//                 <div
+//                   key={img.id}
+//                   className={`relative rounded-xl overflow-hidden border-2 transition ${
+//                     img.is_cover
+//                       ? 'border-emerald-500'
+//                       : 'border-gray-200'
+//                   }`}
+//                 >
+//                   <img
+//                     src={img.image_url}
+//                     alt={img.caption || 'Trek image'}
+//                     className="w-full h-28 object-cover"
+//                   />
+//                   {img.is_cover && (
+//                     <span className="absolute top-2 left-2 bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+//                       Cover
+//                     </span>
+//                   )}
+//                   <div className="absolute bottom-0 inset-x-0 bg-black/50 flex">
+//                     {!img.is_cover && (
+//                       <button
+//                         type="button"
+//                         onClick={() => setAsCover(img.id)}
+//                         className="flex-1 text-white text-xs py-1.5 hover:bg-emerald-600 transition"
+//                       >
+//                         Set Cover
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => deleteExistingImage(img.id)}
+//                       className="flex-1 text-red-300 text-xs py-1.5 hover:bg-red-600 hover:text-white transition"
+//                     >
+//                       Delete
+//                     </button>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </SectionCard>
+
+//         {/* ── Upload New Images ───────────────────────────── */}
+//         <SectionCard title="Upload New Images">
+//           <input
+//             type="file"
+//             accept="image/*"
+//             multiple
+//             className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6
+//                        text-center text-gray-500 cursor-pointer
+//                        hover:border-emerald-400 transition"
+//             onChange={e => {
+//               setNewImages(Array.from(e.target.files));
+//               setCoverIndex(null);
+//             }}
+//           />
+
+//           {newImages.length > 0 && (
+//             <>
+//               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+//                 {newImages.map((file, i) => (
+//                   <div
+//                     key={i}
+//                     onClick={() => setCoverIndex(i)}
+//                     className={`relative rounded-xl overflow-hidden border-2
+//                                 cursor-pointer transition ${
+//                       i === coverIndex
+//                         ? 'border-emerald-500'
+//                         : 'border-gray-200 hover:border-emerald-300'
+//                     }`}
+//                   >
+//                     <img
+//                       src={URL.createObjectURL(file)}
+//                       alt={file.name}
+//                       className="w-full h-28 object-cover"
+//                     />
+//                     {i === coverIndex && (
+//                       <span className="absolute top-2 left-2 bg-emerald-500
+//                                        text-white text-xs font-bold px-2 py-0.5 rounded-full">
+//                         Cover
+//                       </span>
+//                     )}
+//                   </div>
+//                 ))}
+//               </div>
+//               <p className="text-xs text-gray-400">
+//                 Click an image to set it as cover photo.
+//               </p>
+//             </>
+//           )}
+//         </SectionCard>
+
+
+//         {/* Gallery Images */}
+//         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+//           <h2 className="text-lg font-bold text-gray-900 border-b pb-3">
+//             Gallery Images <span className="text-gray-400 font-normal text-sm">(optional, uploaded to Cloudinary)</span>
+//           </h2>
+
+//           <div
+//             className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-center text-gray-500 cursor-pointer hover:border-emerald-400 transition"
+//             onClick={() => galleryInputRef.current?.click()}
+//           >
+//             Click to add gallery images — you can select more later without losing what you've already added.
+//             <input
+//               ref={galleryInputRef}
+//               type="file"
+//               accept="image/*"
+//               multiple
+//               className="hidden"
+//               onChange={handleGalleryChange}
+//             />
+//           </div>
+
+//           {galleryImages.length > 0 && (
+//             <>
+//               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+//                 {galleryImages.map((img, i) => (
+//                   <div
+//                     key={img.id}
+//                     draggable
+//                     onDragStart={() => handleDragStart(i)}
+//                     onDragEnter={() => handleDragEnter(i)}
+//                     onDragOver={(e) => e.preventDefault()}
+//                     onDragEnd={handleDragEnd}
+//                     className={`relative rounded-xl overflow-hidden border-2 border-gray-200 transition cursor-move ${
+//                       draggingId === img.id ? 'opacity-40' : ''
+//                     }`}
+//                   >
+//                     <img
+//                       src={img.preview}
+//                       alt={img.file.name}
+//                       className="w-full h-28 object-cover"
+//                     />
+//                     <span className="absolute top-1 left-1 bg-gray-900/70 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+//                       #{i + 1}
+//                     </span>
+//                     <button
+//                       type="button"
+//                       onClick={() => removeGalleryImage(img.id)}
+//                       className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+//                       title="Remove"
+//                     >
+//                       ×
+//                     </button>
+//                     <div className="absolute bottom-1 right-1 flex gap-1">
+//                       <button
+//                         type="button"
+//                         onClick={() => moveGalleryImage(i, -1)}
+//                         disabled={i === 0}
+//                         className="bg-white/90 disabled:opacity-30 text-gray-700 text-xs w-5 h-5 rounded flex items-center justify-center"
+//                         title="Move left"
+//                       >
+//                         ‹
+//                       </button>
+//                       <button
+//                         type="button"
+//                         onClick={() => moveGalleryImage(i, 1)}
+//                         disabled={i === galleryImages.length - 1}
+//                         className="bg-white/90 disabled:opacity-30 text-gray-700 text-xs w-5 h-5 rounded flex items-center justify-center"
+//                         title="Move right"
+//                       >
+//                         ›
+//                       </button>
+//                     </div>
+//                   </div>
+//                 ))}
+//               </div>
+//               <p className="text-xs text-gray-400">
+//                 Drag to reorder, or use the ‹ › buttons. Click × to remove an image.
+//               </p>
+//             </>
+//           )}
+//         </div>
+
+//         {/* ── SEO ─────────────────────────────────────────── */}
+//         <SectionCard title="SEO Settings">
+//           <FormField label="Meta Title" hint="(60 chars ideal)">
+//             <input
+//               type="text" maxLength={70}
+//               className="input"
+//               value={form.meta_title}
+//               onChange={set('meta_title')}
+//               placeholder={`${form.title} | Himalaya Treks`}
+//             />
+//             <p className="text-xs text-gray-400 mt-1">
+//               {form.meta_title.length}/70 characters
+//             </p>
+//           </FormField>
+
+//           <FormField label="Meta Description" hint="(160 chars ideal)">
+//             <textarea
+//               rows={3} maxLength={170}
+//               className="input"
+//               value={form.meta_description}
+//               onChange={set('meta_description')}
+//               placeholder="Compelling description for Google search results..."
+//             />
+//             <p className="text-xs text-gray-400 mt-1">
+//               {form.meta_description.length}/170 characters
+//             </p>
+//           </FormField>
+//         </SectionCard>
+
+//         {/* ── Submit ──────────────────────────────────────── */}
+//         <div className="flex items-center gap-4 pb-10">
+//           <button
+//             type="submit"
+//             disabled={saving || uploadingImages}
+//             className="btn-primary btn-lg disabled:opacity-50"
+//           >
+//             {uploadingImages
+//               ? 'Uploading Images...'
+//               : saving
+//               ? 'Saving...'
+//               : '💾 Save Changes'}
+//           </button>
+//           <button
+//             type="button"
+//             onClick={() => router.push('/admin/treks')}
+//             className="btn-secondary btn-lg"
+//           >
+//             Cancel
+//           </button>
+//         </div>
+//       </form>
+//     </div>
+//   );
+// }
+
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Image from 'next/image';
 import api from '@/lib/api';
 
 const difficulties = ['easy', 'moderate', 'challenging', 'extreme'];
-const regions = ['Everest', 'Annapurna', 'Langtang', 'Manaslu', 'Mustang', 'Other'];
-
-
 
 // ── Reusable form field components ──────────────────────────
 function FormField({ label, hint, children }) {
@@ -23,12 +745,32 @@ function FormField({ label, hint, children }) {
   );
 }
 
-function SectionCard({ title, children }) {
+function SectionCard({ title, subtitle, children }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
-      <h2 className="text-lg font-bold text-gray-900 border-b pb-3">{title}</h2>
+      <div className="border-b pb-3">
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        {subtitle && <p className="text-sm text-gray-400 mt-1">{subtitle}</p>}
+      </div>
       {children}
     </div>
+  );
+}
+
+function ToggleRow({ label, hint, checked, onChange }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer py-1">
+      <input
+        type="checkbox"
+        className="w-4 h-4 text-emerald-600 rounded"
+        checked={checked}
+        onChange={onChange}
+      />
+      <span>
+        <span className="text-sm font-semibold text-gray-700">{label}</span>
+        {hint && <span className="block text-xs text-gray-400">{hint}</span>}
+      </span>
+    </label>
   );
 }
 
@@ -38,63 +780,104 @@ export default function EditTrekPage() {
   const { id } = useParams();
 
   const [form, setForm] = useState({
-    title: '', slug: '', description: '', region: '',
+    title: '', slug: '', description: '', region_id: '',
     difficulty: 'moderate', duration_days: '', max_altitude: '',
     distance_km: '', price: '', discount_price: '',
     max_group_size: 12, min_group_size: 1,
     start_location: '', end_location: '',
-    is_featured: false, is_active: true,
     meta_title: '', meta_description: '',
     highlights: '',
+    // Visibility / marketing — this page is where these are managed.
+    is_homepage: false,
+    is_featured: false,
+    is_expedition: false,
+    is_active: true,
+    show_in_menu: true,
+    menu_order: 0,
+    is_promo: false,
   });
 
-  const [existingImages, setExistingImages] = useState([]);
-  const [newImages, setNewImages]           = useState([]);
-  const [coverIndex, setCoverIndex]         = useState(null);
-  const [loading, setLoading]               = useState(true);
-  const [saving, setSaving]                 = useState(false);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [error, setError]                   = useState('');
-  const [success, setSuccess]               = useState('');
+  // Regions — fetched, not hardcoded, so region_id maps to a real regions.id.
+  const [regions, setRegions] = useState([]);
+  const [regionsLoading, setRegionsLoading] = useState(true);
 
-  // ── Gallery images state ───────────────────────────────────
-  const [galleryImages, setGalleryImages] = useState([]); // [{ id, file, preview }]
-  const [draggingId, setDraggingId]       = useState(null);
-  const galleryInputRef = useRef(null);
-  const dragIndexRef    = useRef(null); // tracks index currently being dragged
+  const [existingImages, setExistingImages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // ── New images to upload — one consolidated list ───────────
+  // (replaces the old separate "Upload New Images" / "Gallery Images"
+  // sections, which duplicated the same endpoint and one of them sent
+  // an `is_gallery` field the backend never reads)
+  const [newImages, setNewImages] = useState([]); // [{ id, file, preview }]
+  const [newCoverId, setNewCoverId] = useState(null); // which new image (if any) becomes the cover
+  const [draggingId, setDraggingId] = useState(null);
+  const newImagesInputRef = useRef(null);
+  const dragIndexRef = useRef(null);
+
+  // ── Fetch regions ───────────────────────────────────────────
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchRegions = async () => {
+      try {
+        const res = await api.get('/regions');
+        const data = res.data?.data || [];
+        const sorted = [...data].sort(
+          (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
+        );
+        if (isMounted) setRegions(sorted);
+      } catch (err) {
+        console.error('Failed to load regions', err);
+      } finally {
+        if (isMounted) setRegionsLoading(false);
+      }
+    };
+
+    fetchRegions();
+    return () => { isMounted = false; };
+  }, []);
 
   // ── Load existing trek data ────────────────────────────────
   useEffect(() => {
     async function loadTrek() {
       try {
         const [trekRes, imagesRes] = await Promise.all([
-          api.get(`/treks/id/${id}`),           // get by ID — we'll add this endpoint
+          api.get(`/treks/id/${id}`),
           api.get(`/images/trek/${id}`),
         ]);
 
         const trek = trekRes.data.data;
         setForm({
-          title:            trek.title           || '',
-          slug:             trek.slug            || '',
-          description:      trek.description     || '',
-          region:           trek.region          || '',
-          difficulty:       trek.difficulty      || 'moderate',
-          duration_days:    trek.duration_days   || '',
-          max_altitude:     trek.max_altitude    || '',
-          distance_km:      trek.distance_km     || '',
-          price:            trek.price           || '',
-          discount_price:   trek.discount_price  || '',
-          max_group_size:   trek.max_group_size  || 12,
-          min_group_size:   trek.min_group_size  || 1,
-          start_location:   trek.start_location  || '',
-          end_location:     trek.end_location    || '',
-          is_featured:      trek.is_featured     || false,
-          is_active:        trek.is_active       !== false,
-          meta_title:       trek.meta_title      || '',
+          title: trek.title || '',
+          slug: trek.slug || '',
+          description: trek.description || '',
+          region_id: trek.region_id || '',
+          difficulty: trek.difficulty || 'moderate',
+          duration_days: trek.duration_days || '',
+          max_altitude: trek.max_altitude || '',
+          distance_km: trek.distance_km || '',
+          price: trek.price || '',
+          discount_price: trek.discount_price || '',
+          max_group_size: trek.max_group_size || 12,
+          min_group_size: trek.min_group_size || 1,
+          start_location: trek.start_location || '',
+          end_location: trek.end_location || '',
+          meta_title: trek.meta_title || '',
           meta_description: trek.meta_description || '',
           highlights: Array.isArray(trek.highlights)
             ? trek.highlights.join('\n')
             : '',
+          is_homepage: trek.is_homepage || false,
+          is_featured: trek.is_featured || false,
+          is_expedition: trek.is_expedition || false,
+          is_active: trek.is_active !== false,
+          show_in_menu: trek.show_in_menu !== false,
+          menu_order: trek.menu_order || 0,
+          is_promo: trek.is_promo || false,
         });
 
         setExistingImages(imagesRes.data.data || []);
@@ -109,16 +892,16 @@ export default function EditTrekPage() {
     if (id) loadTrek();
   }, [id]);
 
-  // ── Clean up gallery preview object URLs on unmount ────────
+  // ── Clean up new-image preview object URLs on unmount ──────
   useEffect(() => {
     return () => {
-      galleryImages.forEach(img => URL.revokeObjectURL(img.preview));
+      newImages.forEach((img) => URL.revokeObjectURL(img.preview));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Gallery image handlers ──────────────────────────────────
-  const handleGalleryChange = (e) => {
+  // ── New image handlers ──────────────────────────────────────
+  const handleNewImagesChange = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -128,21 +911,21 @@ export default function EditTrekPage() {
       preview: URL.createObjectURL(file),
     }));
 
-    setGalleryImages(prev => [...prev, ...newItems]);
-    // reset input so selecting the same file again still fires onChange
+    setNewImages((prev) => [...prev, ...newItems]);
     e.target.value = '';
   };
 
-  const removeGalleryImage = (imgId) => {
-    setGalleryImages(prev => {
-      const target = prev.find(img => img.id === imgId);
+  const removeNewImage = (imgId) => {
+    setNewImages((prev) => {
+      const target = prev.find((img) => img.id === imgId);
       if (target) URL.revokeObjectURL(target.preview);
-      return prev.filter(img => img.id !== imgId);
+      return prev.filter((img) => img.id !== imgId);
     });
+    if (newCoverId === imgId) setNewCoverId(null);
   };
 
-  const moveGalleryImage = (index, direction) => {
-    setGalleryImages(prev => {
+  const moveNewImage = (index, direction) => {
+    setNewImages((prev) => {
       const newIndex = index + direction;
       if (newIndex < 0 || newIndex >= prev.length) return prev;
       const updated = [...prev];
@@ -153,14 +936,14 @@ export default function EditTrekPage() {
 
   const handleDragStart = (index) => {
     dragIndexRef.current = index;
-    setDraggingId(galleryImages[index]?.id ?? null);
+    setDraggingId(newImages[index]?.id ?? null);
   };
 
   const handleDragEnter = (index) => {
     const dragIndex = dragIndexRef.current;
     if (dragIndex === null || dragIndex === index) return;
 
-    setGalleryImages(prev => {
+    setNewImages((prev) => {
       const updated = [...prev];
       const [moved] = updated.splice(dragIndex, 1);
       updated.splice(index, 0, moved);
@@ -182,48 +965,54 @@ export default function EditTrekPage() {
     setSuccess('');
 
     try {
-      // 1. Update trek details
+      // 1. Update trek details — built explicitly rather than spreading
+      // `form`, so we never accidentally send a stale/renamed field and
+      // always send exactly the columns updateTrek's whitelist expects.
       await api.put(`/treks/${id}`, {
-        ...form,
-        duration_days:  parseInt(form.duration_days),
-        max_altitude:   form.max_altitude  ? parseInt(form.max_altitude)    : null,
-        distance_km:    form.distance_km   ? parseFloat(form.distance_km)   : null,
-        price:          parseFloat(form.price),
+        title: form.title,
+        slug: form.slug,
+        description: form.description,
+        region_id: form.region_id,
+        difficulty: form.difficulty,
+        duration_days: parseInt(form.duration_days),
+        max_altitude: form.max_altitude ? parseInt(form.max_altitude) : null,
+        distance_km: form.distance_km ? parseFloat(form.distance_km) : null,
+        price: parseFloat(form.price),
         discount_price: form.discount_price ? parseFloat(form.discount_price) : null,
-        highlights:     form.highlights
+        max_group_size: form.max_group_size,
+        min_group_size: form.min_group_size,
+        start_location: form.start_location,
+        end_location: form.end_location,
+        meta_title: form.meta_title,
+        meta_description: form.meta_description,
+        highlights: form.highlights
           ? form.highlights.split('\n').filter(Boolean)
           : null,
+        // Visibility / marketing — this is the primary reason this page exists.
+        is_homepage: form.is_homepage,
+        is_featured: form.is_featured,
+        is_expedition: form.is_expedition,
+        is_active: form.is_active,
+        show_in_menu: form.show_in_menu,
+        menu_order: parseInt(form.menu_order) || 0,
+        is_promo: form.is_promo,
       });
 
-      // 2. Upload new (cover-eligible) images if any
+      // 2. Upload any new images, in the order shown, against this trek.
+      // Field names (image, caption, is_cover, sort_order) match exactly
+      // what uploadTrekImage reads off req.file / req.body.
       if (newImages.length > 0) {
         setUploadingImages(true);
+        const baseSortOrder = existingImages.length;
+
         for (let i = 0; i < newImages.length; i++) {
           const formData = new FormData();
-          formData.append('image', newImages[i]);
-          formData.append('is_cover', coverIndex === i ? 'true' : 'false');
-          formData.append('sort_order', existingImages.length + i);
-          await api.post(`/images/trek/${id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
-        }
-      }
+          formData.append('image', newImages[i].file);
+          formData.append('caption', newImages[i].file.name);
+          formData.append('is_cover', newImages[i].id === newCoverId ? 'true' : 'false');
+          formData.append('sort_order', String(baseSortOrder + i));
 
-      // 3. Upload gallery images if any
-      // NOTE: assumes the backend accepts an `is_gallery` flag on this endpoint —
-      // confirm with your API before relying on this in production.
-      if (galleryImages.length > 0) {
-        setUploadingImages(true);
-        const baseSortOrder = existingImages.length + newImages.length;
-        for (let i = 0; i < galleryImages.length; i++) {
-          const formData = new FormData();
-          formData.append('image', galleryImages[i].file);
-          formData.append('is_cover', 'false');
-          formData.append('is_gallery', 'true');
-          formData.append('sort_order', baseSortOrder + i);
-          await api.post(`/images/trek/${id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          await api.post(`/images/trek/${id}`, formData);
         }
       }
 
@@ -231,6 +1020,7 @@ export default function EditTrekPage() {
       setTimeout(() => router.push('/admin/treks'), 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update trek.');
+      console.error(err);
     } finally {
       setSaving(false);
       setUploadingImages(false);
@@ -241,34 +1031,33 @@ export default function EditTrekPage() {
   const deleteExistingImage = async (imageId) => {
     if (!confirm('Delete this image? This cannot be undone.')) return;
     try {
-      await api.delete(`/images/trek/${imageId}`);
-      setExistingImages(prev => prev.filter(img => img.id !== imageId));
+      await api.delete(`/images/${imageId}`);
+      setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
     } catch (err) {
       alert('Failed to delete image.');
+      console.error(err);
     }
   };
 
   // ── Set cover image ────────────────────────────────────────
   const setAsCover = async (imageId) => {
     try {
-      await api.put(`/images/${id}/cover/${imageId}`);
+      await api.patch(`/images/trek/${id}/${imageId}/cover`);
 
-      setExistingImages(prev =>
-        prev.map(img => ({
+      setExistingImages((prev) =>
+        prev.map((img) => ({
           ...img,
-          is_cover: img.id === imageId
+          is_cover: img.id === imageId,
         }))
       );
     } catch (err) {
+      alert('Failed to set cover image.');
       console.error(err);
     }
   };
 
-  const set = (field) => (e) =>
-    setForm(f => ({ ...f, [field]: e.target.value }));
-
-  const setCheck = (field) => (e) =>
-    setForm(f => ({ ...f, [field]: e.target.checked }));
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+  const setCheck = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.checked }));
 
   // ── Loading state ──────────────────────────────────────────
   if (loading) {
@@ -297,12 +1086,8 @@ export default function EditTrekPage() {
       </div>
 
       {/* Alerts */}
-      {error && (
-        <div className="alert-error mb-6">⚠️ {error}</div>
-      )}
-      {success && (
-        <div className="alert-success mb-6">{success}</div>
-      )}
+      {error && <div className="alert-error mb-6">⚠️ {error}</div>}
+      {success && <div className="alert-success mb-6">{success}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-8">
 
@@ -318,10 +1103,10 @@ export default function EditTrekPage() {
                   value={form.title}
                   onChange={(e) => {
                     const title = e.target.value;
-                    const slug  = title.toLowerCase()
+                    const slug = title.toLowerCase()
                       .replace(/[^a-z0-9]+/g, '-')
                       .replace(/(^-|-$)/g, '');
-                    setForm(f => ({ ...f, title, slug }));
+                    setForm((f) => ({ ...f, title, slug }));
                   }}
                 />
               </FormField>
@@ -338,12 +1123,18 @@ export default function EditTrekPage() {
 
             <FormField label="Region *">
               <select
-                required className="input"
-                value={form.region}
-                onChange={set('region')}
+                required
+                className="input"
+                value={form.region_id}
+                onChange={set('region_id')}
+                disabled={regionsLoading}
               >
-                <option value="">Select Region</option>
-                {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                <option value="">
+                  {regionsLoading ? 'Loading regions...' : 'Select Region'}
+                </option>
+                {regions.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
               </select>
             </FormField>
 
@@ -353,7 +1144,7 @@ export default function EditTrekPage() {
                 value={form.difficulty}
                 onChange={set('difficulty')}
               >
-                {difficulties.map(d => (
+                {difficulties.map((d) => (
                   <option key={d} value={d} className="capitalize">
                     {d.charAt(0).toUpperCase() + d.slice(1)}
                   </option>
@@ -416,6 +1207,15 @@ export default function EditTrekPage() {
               />
             </FormField>
 
+            <FormField label="Min Group Size">
+              <input
+                type="number" min="1"
+                className="input"
+                value={form.min_group_size}
+                onChange={set('min_group_size')}
+              />
+            </FormField>
+
             <FormField label="Start Location">
               <input
                 type="text"
@@ -435,32 +1235,6 @@ export default function EditTrekPage() {
                 placeholder="e.g. Kathmandu"
               />
             </FormField>
-
-            {/* Toggles */}
-            <div className="md:col-span-2 flex items-center gap-8 pt-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-emerald-600 rounded"
-                  checked={form.is_featured}
-                  onChange={setCheck('is_featured')}
-                />
-                <span className="text-sm font-semibold text-gray-700">
-                  Feature on homepage
-                </span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-emerald-600 rounded"
-                  checked={form.is_active}
-                  onChange={setCheck('is_active')}
-                />
-                <span className="text-sm font-semibold text-gray-700">
-                  Active (visible to public)
-                </span>
-              </label>
-            </div>
           </div>
 
           {/* Description */}
@@ -481,9 +1255,71 @@ export default function EditTrekPage() {
               className="input"
               value={form.highlights}
               onChange={set('highlights')}
-              placeholder={"Stand at Everest Base Camp 5,364m\nVisit Tengboche Monastery\nCross dramatic high passes"}
+              placeholder={'Stand at Everest Base Camp 5,364m\nVisit Tengboche Monastery\nCross dramatic high passes'}
             />
           </FormField>
+        </SectionCard>
+
+        {/* ── Visibility & Marketing Settings ─────────────── */}
+        {/* This is the section the two-step workflow is built around: all
+            six boolean/visibility fields live here, on the update side. */}
+        <SectionCard
+          title="Visibility & Marketing Settings"
+          subtitle="These control where and how this trek appears across the site."
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+            <ToggleRow
+              label="Active (visible to public)"
+              hint="Turn off to hide this trek everywhere without deleting it."
+              checked={form.is_active}
+              onChange={setCheck('is_active')}
+            />
+            <ToggleRow
+              label="Feature on homepage"
+              hint="Shows in the featured-treks section."
+              checked={form.is_featured}
+              onChange={setCheck('is_featured')}
+            />
+            <ToggleRow
+              label="Is Expedition"
+              hint="Marks this as a mountaineering / expedition package."
+              checked={form.is_expedition}
+              onChange={setCheck('is_expedition')}
+            />
+            <ToggleRow
+              label="Homepage hero trek"
+              hint="Only one trek can hold this at a time — enabling it here will turn it off for whichever trek currently has it."
+              checked={form.is_homepage}
+              onChange={setCheck('is_homepage')}
+            />
+            <ToggleRow
+              label="Show in mega menu"
+              hint="Include this trek in its region's menu sub-list."
+              checked={form.show_in_menu}
+              onChange={setCheck('show_in_menu')}
+            />
+            <ToggleRow
+              label="Promo card"
+              hint="Highlight as a promo card within its region (top picks only)."
+              checked={form.is_promo}
+              onChange={setCheck('is_promo')}
+            />
+          </div>
+
+          {form.show_in_menu && (
+            <FormField
+              label="Menu order"
+              hint="(lower numbers appear first within the region's sub-list)"
+            >
+              <input
+                type="number"
+                min="0"
+                className="input max-w-[10rem]"
+                value={form.menu_order}
+                onChange={set('menu_order')}
+              />
+            </FormField>
+          )}
         </SectionCard>
 
         {/* ── Existing Images ─────────────────────────────── */}
@@ -492,13 +1328,11 @@ export default function EditTrekPage() {
             <p className="text-gray-400 text-sm">No images uploaded yet.</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {existingImages.map(img => (
+              {existingImages.map((img) => (
                 <div
                   key={img.id}
                   className={`relative rounded-xl overflow-hidden border-2 transition ${
-                    img.is_cover
-                      ? 'border-emerald-500'
-                      : 'border-gray-200'
+                    img.is_cover ? 'border-emerald-500' : 'border-gray-200'
                   }`}
                 >
                   <img
@@ -535,82 +1369,30 @@ export default function EditTrekPage() {
           )}
         </SectionCard>
 
-        {/* ── Upload New Images ───────────────────────────── */}
-        <SectionCard title="Upload New Images">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6
-                       text-center text-gray-500 cursor-pointer
-                       hover:border-emerald-400 transition"
-            onChange={e => {
-              setNewImages(Array.from(e.target.files));
-              setCoverIndex(null);
-            }}
-          />
-
-          {newImages.length > 0 && (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {newImages.map((file, i) => (
-                  <div
-                    key={i}
-                    onClick={() => setCoverIndex(i)}
-                    className={`relative rounded-xl overflow-hidden border-2
-                                cursor-pointer transition ${
-                      i === coverIndex
-                        ? 'border-emerald-500'
-                        : 'border-gray-200 hover:border-emerald-300'
-                    }`}
-                  >
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      className="w-full h-28 object-cover"
-                    />
-                    {i === coverIndex && (
-                      <span className="absolute top-2 left-2 bg-emerald-500
-                                       text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                        Cover
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400">
-                Click an image to set it as cover photo.
-              </p>
-            </>
-          )}
-        </SectionCard>
-
-
-        {/* Gallery Images */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-          <h2 className="text-lg font-bold text-gray-900 border-b pb-3">
-            Gallery Images <span className="text-gray-400 font-normal text-sm">(optional, uploaded to Cloudinary)</span>
-          </h2>
-
+        {/* ── Add New Images (cover + gallery, unified) ───── */}
+        <SectionCard
+          title="Add New Images"
+          subtitle="Uploaded to Cloudinary and attached to this trek immediately after saving."
+        >
           <div
             className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-center text-gray-500 cursor-pointer hover:border-emerald-400 transition"
-            onClick={() => galleryInputRef.current?.click()}
+            onClick={() => newImagesInputRef.current?.click()}
           >
-            Click to add gallery images — you can select more later without losing what you've already added.
+            Click to add images — drag to reorder, click one to mark it as the new cover.
             <input
-              ref={galleryInputRef}
+              ref={newImagesInputRef}
               type="file"
               accept="image/*"
               multiple
               className="hidden"
-              onChange={handleGalleryChange}
+              onChange={handleNewImagesChange}
             />
           </div>
 
-          {galleryImages.length > 0 && (
+          {newImages.length > 0 && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {galleryImages.map((img, i) => (
+                {newImages.map((img, i) => (
                   <div
                     key={img.id}
                     draggable
@@ -618,9 +1400,14 @@ export default function EditTrekPage() {
                     onDragEnter={() => handleDragEnter(i)}
                     onDragOver={(e) => e.preventDefault()}
                     onDragEnd={handleDragEnd}
-                    className={`relative rounded-xl overflow-hidden border-2 border-gray-200 transition cursor-move ${
-                      draggingId === img.id ? 'opacity-40' : ''
-                    }`}
+                    onClick={() =>
+                      setNewCoverId((prev) => (prev === img.id ? null : img.id))
+                    }
+                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition ${
+                      img.id === newCoverId
+                        ? 'border-emerald-500'
+                        : 'border-gray-200 hover:border-emerald-300'
+                    } ${draggingId === img.id ? 'opacity-40' : ''}`}
                   >
                     <img
                       src={img.preview}
@@ -630,18 +1417,29 @@ export default function EditTrekPage() {
                     <span className="absolute top-1 left-1 bg-gray-900/70 text-white text-xs font-bold px-1.5 py-0.5 rounded">
                       #{i + 1}
                     </span>
+                    {img.id === newCoverId && (
+                      <span className="absolute top-1 right-1 bg-emerald-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                        Cover
+                      </span>
+                    )}
                     <button
                       type="button"
-                      onClick={() => removeGalleryImage(img.id)}
-                      className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeNewImage(img.id);
+                      }}
+                      className="absolute bottom-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
                       title="Remove"
                     >
                       ×
                     </button>
-                    <div className="absolute bottom-1 right-1 flex gap-1">
+                    <div className="absolute bottom-1 left-1 flex gap-1">
                       <button
                         type="button"
-                        onClick={() => moveGalleryImage(i, -1)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveNewImage(i, -1);
+                        }}
                         disabled={i === 0}
                         className="bg-white/90 disabled:opacity-30 text-gray-700 text-xs w-5 h-5 rounded flex items-center justify-center"
                         title="Move left"
@@ -650,8 +1448,11 @@ export default function EditTrekPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => moveGalleryImage(i, 1)}
-                        disabled={i === galleryImages.length - 1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveNewImage(i, 1);
+                        }}
+                        disabled={i === newImages.length - 1}
                         className="bg-white/90 disabled:opacity-30 text-gray-700 text-xs w-5 h-5 rounded flex items-center justify-center"
                         title="Move right"
                       >
@@ -662,11 +1463,12 @@ export default function EditTrekPage() {
                 ))}
               </div>
               <p className="text-xs text-gray-400">
-                Drag to reorder, or use the ‹ › buttons. Click × to remove an image.
+                Drag to reorder, or use the ‹ › buttons. Click an image to toggle it as the
+                new cover — leave none selected to add these as gallery images only.
               </p>
             </>
           )}
-        </div>
+        </SectionCard>
 
         {/* ── SEO ─────────────────────────────────────────── */}
         <SectionCard title="SEO Settings">

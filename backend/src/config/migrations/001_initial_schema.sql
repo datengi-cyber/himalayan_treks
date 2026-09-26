@@ -62,6 +62,7 @@ CREATE TABLE treks (
   is_featured     BOOLEAN DEFAULT FALSE,
   is_homepage     BOOLEAN DEFAULT FASLE,
   is_active       BOOLEAN DEFAULT TRUE,
+  is_expedition   BOOLEAN DEFAULT TRUE,
   meta_title      VARCHAR(255),                  -- SEO
   meta_description TEXT,                         -- SEO
   created_at      TIMESTAMP DEFAULT NOW(),

@@ -1,8 +1,6 @@
 const pool = require('../config/db');
 const { createError } = require('../middleware/errorMiddleware');
 
-// ─── EXPEDITIONS MEGA MENU ─────────────────────────────────
-// GET /api/nav/expeditions
 const getExpeditionsMenu = async (req, res, next) => {
   try {
     const query = `

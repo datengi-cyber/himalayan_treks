@@ -4,10 +4,12 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const navRoutes = require('./routes/navRoutes');
+const regionRoutes = require('./routes/regionRoutes')
 const trekRoutes = require('./routes/trekRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+
 
 const { errorHandler } = require('./middleware/errorMiddleware');
 const { protect, adminOnly } = require('./middleware/authMiddleware');
@@ -15,14 +17,6 @@ const { protect, adminOnly } = require('./middleware/authMiddleware');
 const pool = require('./config/db');
 
 const app = express();   
-
-// -------------------------
-// Middleware
-// -------------------------
-// app.use(cors({
-//   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-//   credentials: true,
-// }));
 
 const allowedOrigins = [
   'http://localhost:3000',
@@ -58,6 +52,7 @@ app.get('/api/health', (req, res) => {
 // -------------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/nav', navRoutes);
+app.use('/api/regions', regionRoutes);
 app.use('/api/treks', trekRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/images', imageRoutes);
