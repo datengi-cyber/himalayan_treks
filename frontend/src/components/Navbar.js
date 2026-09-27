@@ -1,71 +1,160 @@
 
 'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 
 // NEXT_PUBLIC_API_URL should already end in /api (same var page.js uses)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-// The API can return `subs: []` (e.g. Everest) while still having promos,
-// so we merge both into one de-duplicated list of links for the centre column.
+// The API can return `subs: []` while still having promos,
+// so we merge both into one de-duplicated list of links.
 const getTrekLinks = (category) => {
   const seen = new Set();
   const links = [];
-  [...(category.subs || []), ...(category.promos || [])].forEach((t) => {
+
+  [...(category?.subs || []), ...(category?.promos || [])].forEach((t) => {
     if (!t?.href || seen.has(t.href)) return;
+
     seen.add(t.href);
-    links.push({ name: (t.name || '').trim(), href: t.href });
+
+    links.push({
+      name: (t.name || '').trim(),
+      href: t.href,
+    });
   });
+
   return links;
 };
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
+
   const closeTimer = useRef(null);
 
+  // ─────────────────────────────────────────────
+  // SCROLL HANDLER
+  // ─────────────────────────────────────────────
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+    };
+
+    // Set initial state
+    onScroll();
+
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
-  // Load expeditions from the API
+  // ─────────────────────────────────────────────
+  // LOAD EXPEDITIONS FROM API
+  // ─────────────────────────────────────────────
   useEffect(() => {
     const controller = new AbortController();
-    (async () => {
+
+    const loadExpeditions = async () => {
       try {
-        const res = await fetch(`${API_URL}/nav/expeditions`, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(`${API_URL}/nav/expeditions`, {
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const json = await res.json();
+
         const list = Array.isArray(json.data) ? json.data : [];
+
         setCategories(list);
-        setActiveCategory((prev) => prev ?? list[0]?.id ?? null);
+
+        setActiveCategory((prev) => {
+          if (prev && list.some((item) => item.id === prev)) {
+            return prev;
+          }
+
+          return list[0]?.id ?? null;
+        });
       } catch (err) {
-        if (err.name !== 'AbortError') console.error('Failed to load expeditions:', err);
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load expeditions:', err);
+        }
       }
-    })();
-    return () => controller.abort();
+    };
+
+    loadExpeditions();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
+  // ─────────────────────────────────────────────
+  // CLEAN UP MEGA MENU TIMER
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+      }
+    };
+  }, []);
+
+  // ─────────────────────────────────────────────
+  // MEGA MENU OPEN / CLOSE
+  // ─────────────────────────────────────────────
   const openMega = () => {
-    if (!categories.length) return; // nothing to show yet
-    if (closeTimer.current) clearTimeout(closeTimer.current);
+    if (!categories.length) return;
+
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+
     setMegaOpen(true);
   };
+
   const scheduleClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setMegaOpen(false), 120);
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+    }
+
+    closeTimer.current = setTimeout(() => {
+      setMegaOpen(false);
+      closeTimer.current = null;
+    }, 120);
   };
 
+  const closeMega = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+
+    setMegaOpen(false);
+  };
+
+  // ─────────────────────────────────────────────
+  // ACTIVE CATEGORY
+  // ─────────────────────────────────────────────
   const activeData =
-    categories.find((c) => c.id === activeCategory) || categories[0] || null;
+    categories.find((c) => c.id === activeCategory) ||
+    categories[0] ||
+    null;
+
   const activeLinks = activeData ? getTrekLinks(activeData) : [];
 
   return (
@@ -74,136 +163,356 @@ export default function Navbar() {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
 
         :root {
-          --gold: #C9A96E;
-          --gold-light: #E8D5B0;
-          --slate: #0D1117;
-          --white: #FAFAF8;
-          --white-60: rgba(250,250,248,0.6);
+          --gold: #c9a96e;
+          --gold-light: #e8d5b0;
+          --slate: #0d1117;
+          --white: #fafaf8;
+          --white-60: rgba(250, 250, 248, 0.6);
           --navy: #192851;
           --navy-light: #223269;
+
           --font-display: 'Cormorant Garamond', Georgia, serif;
           --font-body: 'DM Sans', system-ui, sans-serif;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: var(--font-body); }
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          font-family: var(--font-body);
+        }
+
+        /* ═══════════════════════════════════════════════
+           NAVBAR
+        ═══════════════════════════════════════════════ */
 
         .ht-navbar {
           background: #192851;
-          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+
+          z-index: 100;
+
           padding: 0 3rem;
           height: 100px;
-          display: flex; align-items: center; justify-content: space-between;
-          transition: all 0.5s cubic-bezier(0.16,1,0.3,1);
+
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          transition:
+            height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+            background 0.5s ease,
+            border-color 0.5s ease,
+            backdrop-filter 0.5s ease;
         }
+
         .ht-navbar.scrolled {
+          background: rgba(25, 40, 81, 0.96);
+
           backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 0.5px solid rgba(201,169,110,0.2);
+
+          border-bottom: 0.5px solid rgba(201, 169, 110, 0.2);
+
           height: 80px;
         }
+
+        /* ═══════════════════════════════════════════════
+           LOGO
+        ═══════════════════════════════════════════════ */
+
         .ht-logo {
           display: flex;
           align-items: center;
           gap: 12px;
+
           text-decoration: none;
+
+          flex-shrink: 0;
         }
 
         .ht-logo-mark {
           width: 82px;
           height: 82px;
+
           object-fit: contain;
+
           flex-shrink: 0;
         }
 
         .ht-logo-name {
           font-family: var(--font-display);
+
           font-size: 1.5rem;
           font-weight: 800;
+
           color: var(--white);
+
           letter-spacing: 0.04em;
           line-height: 1;
+
           display: block;
         }
 
         .ht-logo-sub {
           font-size: 0.6rem;
           font-weight: 400;
+
           color: var(--gold);
+
           letter-spacing: 0.25em;
           text-transform: uppercase;
+
           display: block;
           margin-top: 2px;
         }
 
+        /* ═══════════════════════════════════════════════
+           DESKTOP NAVIGATION
+        ═══════════════════════════════════════════════ */
+
         .ht-nav-links {
-          display: flex; align-items: center; gap: 2.5rem; list-style: none;
-           padding: 0.75rem 1.5rem;
-          border-radius: 100px; border: 1px solid rgb(17, 8, 135);
+          display: flex;
+          align-items: center;
+
+          gap: 2.5rem;
+
+          list-style: none;
+
+          padding: 0.75rem 1.5rem;
+
+          border-radius: 100px;
+
+          border: 1px solid rgba(201, 169, 110, 0.18);
+
+          background: rgba(255, 255, 255, 0.015);
         }
-        .ht-nav-links > li { position: relative; display: flex; align-items: center; }
+
+        .ht-nav-links > li {
+          position: relative;
+
+          display: flex;
+          align-items: center;
+        }
+
         .ht-nav-links a {
-          font-size: 0.75rem; font-weight: 500;
-          color:  #ffffff; text-decoration: none;
-          letter-spacing: 0.10em; text-transform: uppercase;
-          position: relative; transition: color 0.3s;
-          display: flex; align-items: center; gap: 0.35rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+
+          color: #ffffff;
+
+          text-decoration: none;
+
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+
+          position: relative;
+
+          transition: color 0.3s;
+
+          display: flex;
+          align-items: center;
+
+          gap: 0.35rem;
         }
+
         .ht-nav-links a::after {
           content: '';
-          position: absolute; bottom: -4px; left: 0; right: 0;
-          height: 1px; background: var(--gold);
-          transform: scaleX(0); transform-origin: left;
-          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
-        }
-        .ht-nav-links a:hover { color: var(--white); }
-        .ht-nav-links a:hover::after { transform: scaleX(1); }
-        .ht-nav-caret {
-          transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
-        }
-        .ht-nav-item-mega.mega-active .ht-nav-caret { transform: rotate(180deg); }
-        .ht-nav-item-mega.mega-active > a { color: var(--white); }
 
-        .ht-nav-actions { display: flex; align-items: center; gap: 1rem; }
+          position: absolute;
+
+          bottom: -4px;
+          left: 0;
+          right: 0;
+
+          height: 1px;
+
+          background: var(--gold);
+
+          transform: scaleX(0);
+          transform-origin: left;
+
+          transition:
+            transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .ht-nav-links a:hover {
+          color: var(--white);
+        }
+
+        .ht-nav-links a:hover::after {
+          transform: scaleX(1);
+        }
+
+        .ht-nav-caret {
+          transition:
+            transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .ht-nav-item-mega.mega-active .ht-nav-caret {
+          transform: rotate(180deg);
+        }
+
+        .ht-nav-item-mega.mega-active > a {
+          color: var(--white);
+        }
+
+        /* ═══════════════════════════════════════════════
+           DESKTOP ACTIONS
+        ═══════════════════════════════════════════════ */
+
+        .ht-nav-actions {
+          display: flex;
+          align-items: center;
+
+          gap: 1rem;
+
+          flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════════
+           GHOST BUTTON
+        ═══════════════════════════════════════════════ */
 
         .ht-btn-ghost {
-          font-size: 0.75rem; font-weight: 500;
-          color:  #ffffff; text-decoration: none;
-          letter-spacing: 0.1em; text-transform: uppercase;
-          padding: 0.5rem 1rem; transition: color 0.3s;
-           border: 1px solid rgba(68, 46, 164, 0.83);
-          cursor: pointer;
-          border-radius: 100px;
-        }
-        .ht-btn-ghost:hover { color: var(--white); }
-        .ht-btn-primary {
-          display: inline-block;
           position: relative;
+
           overflow: hidden;
+
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+
+          font-size: 0.75rem;
+          font-weight: 500;
+
+          color: #ffffff;
+
+          text-decoration: none;
+
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+
+          padding: 0.5rem 1rem;
+
+          border: 1px solid rgba(201, 169, 110, 0.55);
+
+          border-radius: 100px;
+
+          background: transparent;
+
+          cursor: pointer;
+
+          transition:
+            color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Ghost hover sweep */
+
+        .ht-btn-ghost::before {
+          content: '';
+
+          position: absolute;
+          inset: 0;
+
+          background: rgba(255, 255, 255, 0.08);
+
+          transform: translateX(-101%);
+
+          transition:
+            transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+          pointer-events: none;
+        }
+
+        .ht-btn-ghost:hover::before {
+          transform: translateX(0);
+        }
+
+        .ht-btn-ghost:hover {
+          color: #ffffff;
+
+          border-color: #ffffff;
+
+          transform: translateY(-2px);
+
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+        }
+
+        /* Make sure text remains above the sweep */
+
+        .ht-btn-ghost {
+          isolation: isolate;
+        }
+
+        .ht-btn-ghost > * {
+          position: relative;
+          z-index: 1;
+        }
+
+        /* ═══════════════════════════════════════════════
+           PRIMARY BUTTON
+        ═══════════════════════════════════════════════ */
+
+        .ht-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+
+          position: relative;
+
+          overflow: hidden;
+
           cursor: pointer;
 
           padding: 0.75rem 1.8rem;
-          border: 1px solid var(--gold);
-          border-radius: 999px; /* Fully rounded */
 
-          background: transparent; /* No background */
+          border: 1px solid var(--gold);
+
+          border-radius: 999px;
+
+          background: transparent;
+
           color: #fff;
+
+          font-family: inherit;
 
           font-size: 0.7rem;
           font-weight: 500;
+
           letter-spacing: 0.12em;
           text-transform: uppercase;
+
           text-decoration: none;
 
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+          transition:
+            all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .ht-btn-primary::before {
-          content: "";
+          content: '';
+
           position: absolute;
+
           inset: 0;
-          background: rgba(255, 255, 255, 0.08); /* Subtle hover overlay */
+
+          background: rgba(255, 255, 255, 0.08);
+
           transform: translateX(-101%);
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+          transition:
+            transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+          pointer-events: none;
         }
 
         .ht-btn-primary:hover::before {
@@ -212,298 +521,758 @@ export default function Navbar() {
 
         .ht-btn-primary span {
           position: relative;
+
           z-index: 1;
+
           color: #fff;
         }
 
         .ht-btn-primary:hover {
           border-color: #fff;
+
           transform: translateY(-2px);
+
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
         .ht-btn-primary:hover span {
           color: #fff;
         }
+
+        /* ═══════════════════════════════════════════════
+           MOBILE BUTTON
+        ═══════════════════════════════════════════════ */
+
         .ht-mobile-btn {
-          display: none; background: none; border: none; cursor: pointer;
-          color: var(--white); padding: 0.5rem;
+          display: none;
+
+          align-items: center;
+          justify-content: center;
+
+          background: none;
+          border: none;
+
+          cursor: pointer;
+
+          color: var(--white);
+
+          padding: 0.5rem;
         }
+
+        /* ═══════════════════════════════════════════════
+           MOBILE MENU
+        ═══════════════════════════════════════════════ */
 
         .ht-mobile-menu {
-          display: none; flex-direction: column;
-          position: absolute; top: 100%; left: 0; right: 0;
-          background: rgba(13,17,23,0.97);
+          display: none;
+
+          flex-direction: column;
+
+          position: absolute;
+
+          top: 100%;
+          left: 0;
+          right: 0;
+
+          background: rgba(13, 17, 23, 0.97);
+
           backdrop-filter: blur(20px);
-          border-bottom: 0.5px solid rgba(201,169,110,0.2);
+
+          border-bottom: 0.5px solid rgba(201, 169, 110, 0.2);
+
           padding: 1.5rem 2rem 2rem;
+
           gap: 0;
         }
-        .ht-mobile-menu.open { display: flex; }
-        .ht-mobile-menu a, .ht-mobile-menu button {
-          font-size: 0.8rem; letter-spacing: 0.15em;
-          text-transform: uppercase; color: var(--white-60);
-          text-decoration: none; padding: 1rem 0;
-          border-bottom: 0.5px solid rgba(201,169,110,0.1);
-          transition: color 0.3s; background: none; border-left: none;
-          border-right: none; border-top: none; cursor: pointer;
+
+        .ht-mobile-menu.open {
+          display: flex;
+        }
+
+        .ht-mobile-menu a,
+        .ht-mobile-menu button {
+          font-family: inherit;
+
+          font-size: 0.8rem;
+          letter-spacing: 0.15em;
+
+          text-transform: uppercase;
+
+          color: var(--white-60);
+
+          text-decoration: none;
+
+          padding: 1rem 0;
+
+          border-bottom: 0.5px solid rgba(201, 169, 110, 0.1);
+
+          transition: color 0.3s;
+
+          background: none;
+
+          border-left: none;
+          border-right: none;
+          border-top: none;
+
+          cursor: pointer;
+
           text-align: left;
         }
-        .ht-mobile-menu a:hover, .ht-mobile-menu button:hover { color: var(--gold); }
+
+        .ht-mobile-menu a:hover,
+        .ht-mobile-menu button:hover {
+          color: var(--gold);
+        }
+
         .ht-mobile-menu .ht-mobile-cta {
           margin-top: 1.5rem;
-          background: var(--gold); color: var(--slate);
-          border: none; padding: 1rem 1.5rem;
-          font-size: 0.75rem; letter-spacing: 0.15em;
-          font-weight: 500; text-align: center;
-        }
-        .ht-mobile-menu .ht-mobile-cta:hover { color: var(--slate); }
 
-        /* ═══════════════════════════════════════════════════
-           MEGA MENU — Expeditions
-        ═══════════════════════════════════════════════════ */
+          background: var(--gold);
+
+          color: var(--slate);
+
+          border: none;
+
+          padding: 1rem 1.5rem;
+
+          font-size: 0.75rem;
+
+          letter-spacing: 0.15em;
+
+          font-weight: 500;
+
+          text-align: center;
+
+          border-radius: 0;
+        }
+
+        .ht-mobile-menu .ht-mobile-cta:hover {
+          color: var(--slate);
+        }
+
+        /* ═══════════════════════════════════════════════
+           MEGA MENU
+        ═══════════════════════════════════════════════ */
+
         .ht-mega-wrap {
           position: fixed;
-          left: 0; right: 0;
+
+          left: 0;
+          right: 0;
+
           background: var(--navy);
+
           z-index: 99;
-          border-top: 0.5px solid rgba(201,169,110,0.18);
-          border-bottom: 1px solid rgba(201,169,110,0.28);
-          box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+
+          border-top: 0.5px solid rgba(201, 169, 110, 0.18);
+
+          border-bottom: 1px solid rgba(201, 169, 110, 0.28);
+
+          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+
           opacity: 0;
+
           visibility: hidden;
+
           transform: translateY(-12px);
-          transition: opacity 0.35s cubic-bezier(0.16,1,0.3,1),
-                      transform 0.35s cubic-bezier(0.16,1,0.3,1),
-                      top 0.5s cubic-bezier(0.16,1,0.3,1),
-                      visibility 0s linear 0.35s;
+
+          transition:
+            opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            top 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+            visibility 0s linear 0.35s;
+
           pointer-events: none;
         }
+
         .ht-mega-wrap.open {
           opacity: 1;
+
           visibility: visible;
+
           transform: translateY(0);
+
           pointer-events: auto;
-          transition: opacity 0.35s cubic-bezier(0.16,1,0.3,1),
-                      transform 0.35s cubic-bezier(0.16,1,0.3,1),
-                      top 0.5s cubic-bezier(0.16,1,0.3,1),
-                      visibility 0s;
+
+          transition:
+            opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            top 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+            visibility 0s;
         }
 
         .ht-mega-inner {
           display: grid;
+
           grid-template-columns: 280px 1fr 460px;
+
           max-width: 1440px;
+
           margin: 0 auto;
+
           min-height: 420px;
         }
 
-        /* ── LEFT: CATEGORIES ── */
+        /* ═══════════════════════════════════════════════
+           LEFT — CATEGORIES
+        ═══════════════════════════════════════════════ */
+
         .ht-mega-categories {
           padding: 3rem 1rem 3rem 3rem;
-          border-right: 1px solid rgba(201,169,110,0.14);
-          display: flex; flex-direction: column;
+
+          border-right: 1px solid rgba(201, 169, 110, 0.14);
+
+          display: flex;
+          flex-direction: column;
         }
+
         .ht-mega-col-label {
           font-family: var(--font-body);
-          font-size: 0.62rem; font-weight: 500;
-          letter-spacing: 0.28em; text-transform: uppercase;
-          color: rgba(250,250,248,0.35);
+
+          font-size: 0.62rem;
+          font-weight: 500;
+
+          letter-spacing: 0.28em;
+
+          text-transform: uppercase;
+
+          color: rgba(250, 250, 248, 0.35);
+
           margin-bottom: 1.5rem;
         }
+
         .ht-mega-cat-btn {
-          display: flex; align-items: center; justify-content: space-between;
-          width: 100%; text-align: left;
-          background: none; border: none; cursor: pointer;
+          display: flex;
+
+          align-items: center;
+          justify-content: space-between;
+
+          width: 100%;
+
+          text-align: left;
+
+          background: none;
+
+          border: none;
+
+          cursor: pointer;
+
           padding: 0.9rem 0.9rem 0.9rem 1rem;
+
           margin-bottom: 0.35rem;
+
           border-radius: 6px;
+
           border-left: 2px solid transparent;
-          color: rgba(250,250,248,0.68);
-          transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+
+          color: rgba(250, 250, 248, 0.68);
+
+          transition:
+            background 0.3s ease,
+            color 0.3s ease,
+            border-color 0.3s ease;
         }
+
         .ht-mega-cat-btn:hover {
-          background: rgba(255,255,255,0.04);
+          background: rgba(255, 255, 255, 0.04);
+
           color: var(--white);
         }
+
         .ht-mega-cat-btn.active {
-          background: rgba(201,169,110,0.10);
+          background: rgba(201, 169, 110, 0.1);
+
           border-left-color: var(--gold);
+
           color: var(--gold-light);
         }
+
         .ht-mega-cat-name {
           font-family: var(--font-body);
-          font-size: 0.78rem; font-weight: 500;
-          letter-spacing: 0.08em; text-transform: uppercase;
+
+          font-size: 0.78rem;
+          font-weight: 500;
+
+          letter-spacing: 0.08em;
+
+          text-transform: uppercase;
         }
+
         .ht-mega-cat-tagline {
           display: block;
+
           font-family: var(--font-display);
+
           font-style: italic;
+
           font-size: 0.78rem;
+
           font-weight: 400;
+
           letter-spacing: 0.01em;
+
           text-transform: none;
-          color: rgba(250,250,248,0.4);
+
+          color: rgba(250, 250, 248, 0.4);
+
           margin-top: 0.2rem;
         }
-        .ht-mega-cat-btn.active .ht-mega-cat-tagline { color: rgba(232,213,176,0.6); }
+
+        .ht-mega-cat-btn.active .ht-mega-cat-tagline {
+          color: rgba(232, 213, 176, 0.6);
+        }
+
         .ht-mega-cat-arrow {
           color: var(--gold);
+
           opacity: 0;
+
           transform: translateX(-4px);
-          transition: opacity 0.3s ease, transform 0.3s ease;
+
+          transition:
+            opacity 0.3s ease,
+            transform 0.3s ease;
+
           flex-shrink: 0;
         }
+
         .ht-mega-cat-btn.active .ht-mega-cat-arrow,
         .ht-mega-cat-btn:hover .ht-mega-cat-arrow {
           opacity: 1;
+
           transform: translateX(0);
         }
 
-        /* ── CENTER: SUB-EXPEDITIONS ── */
+        /* ═══════════════════════════════════════════════
+           CENTER — SUB EXPEDITIONS
+        ═══════════════════════════════════════════════ */
+
         .ht-mega-subs {
           padding: 3rem 2.5rem;
-          border-right: 1px solid rgba(201,169,110,0.14);
+
+          border-right: 1px solid rgba(201, 169, 110, 0.14);
         }
+
         .ht-mega-subs-heading {
           font-family: var(--font-display);
-          font-size: 1.6rem; font-weight: 400; font-style: italic;
+
+          font-size: 1.6rem;
+          font-weight: 400;
+          font-style: italic;
+
           color: var(--white);
+
           margin-bottom: 0.35rem;
         }
-        .ht-mega-subs-heading b { font-style: normal; color: var(--gold); font-weight: 600; }
-        .ht-mega-subs-sub {
-          font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase;
-          color: rgba(250,250,248,0.4);
-          margin-bottom: 2rem;
-          padding-bottom: 1.5rem;
-          border-bottom: 1px solid rgba(201,169,110,0.14);
+
+        .ht-mega-subs-heading b {
+          font-style: normal;
+
+          color: var(--gold);
+
+          font-weight: 600;
         }
+
+        .ht-mega-subs-sub {
+          font-size: 0.68rem;
+
+          letter-spacing: 0.18em;
+
+          text-transform: uppercase;
+
+          color: rgba(250, 250, 248, 0.4);
+
+          margin-bottom: 2rem;
+
+          padding-bottom: 1.5rem;
+
+          border-bottom: 1px solid rgba(201, 169, 110, 0.14);
+        }
+
         .ht-mega-sub-list {
           list-style: none;
+
           display: grid;
+
           grid-template-columns: 1fr 1fr;
+
           gap: 0.25rem 1.5rem;
         }
+
         .ht-mega-sub-list li a {
-          display: flex; align-items: center; gap: 0.65rem;
+          display: flex;
+
+          align-items: center;
+
+          gap: 0.65rem;
+
           padding: 0.85rem 0.25rem;
-          font-size: 0.8rem; font-weight: 400;
+
+          font-size: 0.8rem;
+          font-weight: 400;
+
           letter-spacing: 0.02em;
-          color: rgba(250,250,248,0.72);
+
+          color: rgba(250, 250, 248, 0.72);
+
           text-decoration: none;
-          border-bottom: 0.5px solid rgba(255,255,255,0.06);
-          transition: color 0.3s ease, padding-left 0.3s ease;
+
+          border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+
+          transition:
+            color 0.3s ease,
+            padding-left 0.3s ease;
         }
+
         .ht-mega-sub-list li a::before {
           content: '';
-          width: 5px; height: 5px; border-radius: 50%;
+
+          width: 5px;
+          height: 5px;
+
+          border-radius: 50%;
+
           background: var(--gold);
+
           flex-shrink: 0;
+
           opacity: 0.5;
-          transition: opacity 0.3s ease, transform 0.3s ease;
+
+          transition:
+            opacity 0.3s ease,
+            transform 0.3s ease;
         }
+
         .ht-mega-sub-list li a:hover {
           color: var(--white);
+
           padding-left: 0.6rem;
         }
+
         .ht-mega-sub-list li a:hover::before {
           opacity: 1;
+
           transform: scale(1.3);
         }
+
         .ht-mega-empty {
           font-size: 0.8rem;
-          color: rgba(250,250,248,0.45);
+
+          color: rgba(250, 250, 248, 0.45);
+
           font-style: italic;
         }
-        .ht-mega-view-all {
-          display: inline-flex; align-items: center; gap: 0.6rem;
-          margin-top: 2rem;
-          font-size: 0.68rem; font-weight: 600;
-          letter-spacing: 0.16em; text-transform: uppercase;
-          color: var(--gold);
-          text-decoration: none;
-          border-bottom: 1px solid rgba(201,169,110,0.4);
-          padding-bottom: 3px;
-          transition: border-color 0.3s ease, gap 0.3s ease;
-        }
-        .ht-mega-view-all:hover { border-color: var(--gold); gap: 0.9rem; }
 
-        /* ── RIGHT: PROMO CARDS ── */
+        .ht-mega-view-all {
+          display: inline-flex;
+
+          align-items: center;
+
+          gap: 0.6rem;
+
+          margin-top: 2rem;
+
+          font-size: 0.68rem;
+          font-weight: 600;
+
+          letter-spacing: 0.16em;
+
+          text-transform: uppercase;
+
+          color: var(--gold);
+
+          text-decoration: none;
+
+          border-bottom: 1px solid rgba(201, 169, 110, 0.4);
+
+          padding-bottom: 3px;
+
+          transition:
+            border-color 0.3s ease,
+            gap 0.3s ease;
+        }
+
+        .ht-mega-view-all:hover {
+          border-color: var(--gold);
+
+          gap: 0.9rem;
+        }
+
+        /* ═══════════════════════════════════════════════
+           RIGHT — PROMO CARDS
+        ═══════════════════════════════════════════════ */
+
         .ht-mega-promos {
           padding: 3rem 3rem 3rem 2.5rem;
-          display: flex; flex-direction: column; gap: 1.25rem;
+
+          display: flex;
+
+          flex-direction: column;
+
+          gap: 1.25rem;
         }
+
         .ht-mega-promo-card {
           position: relative;
+
           flex: 1;
+
           border-radius: 10px;
+
           overflow: hidden;
+
           text-decoration: none;
+
           display: block;
+
           min-height: 165px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
         }
+
         .ht-mega-promo-img {
-          position: absolute; inset: 0;
-          width: 100%; height: 100%;
+          position: absolute;
+
+          inset: 0;
+
+          width: 100%;
+          height: 100%;
+
           object-fit: cover;
-          transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+
+          transition:
+            transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
         .ht-mega-promo-fallback {
-          position: absolute; inset: 0;
-          background: linear-gradient(135deg, #223269 0%, #0D1117 100%);
+          position: absolute;
+
+          inset: 0;
+
+          background:
+            linear-gradient(
+              135deg,
+              #223269 0%,
+              #0d1117 100%
+            );
         }
-        .ht-mega-promo-card:hover .ht-mega-promo-img { transform: scale(1.08); }
+
+        .ht-mega-promo-card:hover .ht-mega-promo-img {
+          transform: scale(1.08);
+        }
+
         .ht-mega-promo-gradient {
-          position: absolute; inset: 0;
-          background: linear-gradient(180deg, rgba(13,17,23,0.05) 30%, rgba(13,17,23,0.88) 100%);
+          position: absolute;
+
+          inset: 0;
+
+          background:
+            linear-gradient(
+              180deg,
+              rgba(13, 17, 23, 0.05) 30%,
+              rgba(13, 17, 23, 0.88) 100%
+            );
         }
+
         .ht-mega-promo-body {
-          position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+          position: absolute;
+
+          left: 0;
+          right: 0;
+          bottom: 0;
+
+          z-index: 2;
+
           padding: 1.25rem 1.4rem;
-          display: flex; align-items: flex-end; justify-content: space-between;
+
+          display: flex;
+
+          align-items: flex-end;
+
+          justify-content: space-between;
+
           gap: 0.75rem;
         }
+
         .ht-mega-promo-name {
           font-family: var(--font-display);
-          font-size: 1.25rem; font-weight: 600;
-          color: var(--white); line-height: 1.15; margin-bottom: 0.25rem;
+
+          font-size: 1.25rem;
+          font-weight: 600;
+
+          color: var(--white);
+
+          line-height: 1.15;
+
+          margin-bottom: 0.25rem;
         }
+
         .ht-mega-promo-sub {
-          font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+          font-size: 0.62rem;
+
+          letter-spacing: 0.14em;
+
+          text-transform: uppercase;
+
           color: var(--gold-light);
         }
+
         .ht-mega-promo-cta {
           flex-shrink: 0;
-          width: 34px; height: 34px; border-radius: 50%;
-          border: 1px solid rgba(250,250,248,0.4);
-          display: flex; align-items: center; justify-content: center;
+
+          width: 34px;
+          height: 34px;
+
+          border-radius: 50%;
+
+          border: 1px solid rgba(250, 250, 248, 0.4);
+
+          display: flex;
+
+          align-items: center;
+
+          justify-content: center;
+
           color: var(--white);
-          transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+
+          transition:
+            background 0.3s ease,
+            border-color 0.3s ease,
+            transform 0.3s ease;
         }
+
         .ht-mega-promo-card:hover .ht-mega-promo-cta {
           background: var(--gold);
+
           border-color: var(--gold);
+
           color: var(--slate);
+
           transform: translateX(3px);
         }
 
+        /* ═══════════════════════════════════════════════
+           TABLET
+        ═══════════════════════════════════════════════ */
+
         @media (max-width: 1200px) {
-          .ht-mega-inner { grid-template-columns: 240px 1fr 380px; }
+          .ht-mega-inner {
+            grid-template-columns: 240px 1fr 380px;
+          }
+
+          .ht-navbar {
+            padding: 0 2rem;
+          }
+
+          .ht-nav-links {
+            gap: 1.5rem;
+          }
+
+          .ht-nav-actions {
+            gap: 0.5rem;
+          }
         }
 
+        /* ═══════════════════════════════════════════════
+           MOBILE
+        ═══════════════════════════════════════════════ */
+
         @media (max-width: 768px) {
-          .ht-navbar { padding: 0 1.5rem; position: relative; }
-          .ht-nav-links, .ht-nav-actions { display: none; }
-          .ht-mobile-btn { display: flex; align-items: center; justify-content: center; }
-          .ht-mega-wrap { display: none; }
+          .ht-navbar {
+            padding: 0 1.5rem;
+
+            position: relative;
+
+            height: 80px;
+          }
+
+          .ht-navbar.scrolled {
+            height: 80px;
+          }
+
+          .ht-logo-mark {
+            width: 64px;
+            height: 64px;
+          }
+
+          .ht-logo-name {
+            font-size: 1.25rem;
+          }
+
+          .ht-nav-links,
+          .ht-nav-actions {
+            display: none;
+          }
+
+          .ht-mobile-btn {
+            display: flex;
+          }
+
+          .ht-mega-wrap {
+            display: none;
+          }
+        }
+
+        /* ═══════════════════════════════════════════════
+           SMALL MOBILE
+        ═══════════════════════════════════════════════ */
+
+        @media (max-width: 480px) {
+          .ht-navbar {
+            padding: 0 1rem;
+          }
+
+          .ht-logo {
+            gap: 8px;
+          }
+
+          .ht-logo-mark {
+            width: 58px;
+            height: 58px;
+          }
+
+          .ht-logo-name {
+            font-size: 1.1rem;
+          }
+
+          .ht-mobile-menu {
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+          }
+        }
+
+        /* ═══════════════════════════════════════════════
+           REDUCED MOTION
+        ═══════════════════════════════════════════════ */
+
+        @media (prefers-reduced-motion: reduce) {
+          .ht-navbar,
+          .ht-btn-ghost,
+          .ht-btn-ghost::before,
+          .ht-btn-primary,
+          .ht-btn-primary::before,
+          .ht-nav-caret,
+          .ht-nav-links a::after,
+          .ht-mega-wrap,
+          .ht-mega-cat-btn,
+          .ht-mega-cat-arrow,
+          .ht-mega-sub-list li a,
+          .ht-mega-sub-list li a::before,
+          .ht-mega-view-all,
+          .ht-mega-promo-img,
+          .ht-mega-promo-cta {
+            transition: none !important;
+          }
         }
       `}</style>
 
+      {/* ═══════════════════════════════════════════════
+          NAVBAR
+      ═══════════════════════════════════════════════ */}
+
       <nav className={`ht-navbar${scrolled ? ' scrolled' : ''}`}>
         {/* Logo */}
+
         <Link href="/" className="ht-logo">
           <Image
             src="/newLOgofor-removebg-preview.png"
@@ -515,177 +1284,451 @@ export default function Navbar() {
           />
 
           <div>
-            <span className="ht-logo-name">Himalaya Legacy</span>
-            {/* <span className="ht-logo-sub">Est. 2009 · Nepal</span> */}
+            <span className="ht-logo-name">
+              Himalaya Legacy
+            </span>
+
+            {/*
+            <span className="ht-logo-sub">
+              Est. 2009 · Nepal
+            </span>
+            */}
           </div>
         </Link>
 
-        {/* Desktop Links */}
+        {/* ═══════════════════════════════════════════════
+            DESKTOP LINKS
+        ═══════════════════════════════════════════════ */}
+
         <ul className="ht-nav-links">
           <li
-            className={`ht-nav-item-mega${megaOpen ? ' mega-active' : ''}`}
+            className={`ht-nav-item-mega${
+              megaOpen ? ' mega-active' : ''
+            }`}
             onMouseEnter={openMega}
             onMouseLeave={scheduleClose}
           >
             <Link href="/treks">
               Expeditions
-              <svg className="ht-nav-caret" width="9" height="6" viewBox="0 0 9 6" fill="none">
-                <path d="M1 1l3.5 3.5L8 1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+
+              <svg
+                className="ht-nav-caret"
+                width="9"
+                height="6"
+                viewBox="0 0 9 6"
+                fill="none"
+              >
+                <path
+                  d="M1 1l3.5 3.5L8 1"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </Link>
           </li>
-          <li><Link href="/treks">Treks</Link></li>
-          <li><Link href="/blog">Blog</Link></li>
-          <li><Link href="/about">About</Link></li>
+
+          <li>
+            <Link href="/treks">
+              Treks
+            </Link>
+          </li>
+
+          <li>
+            <Link href="/blog">
+              Blog
+            </Link>
+          </li>
+
+          <li>
+            <Link href="/about">
+              About
+            </Link>
+          </li>
         </ul>
 
-        {/* Desktop Actions */}
+        {/* ═══════════════════════════════════════════════
+            DESKTOP ACTIONS
+        ═══════════════════════════════════════════════ */}
+
         <div className="ht-nav-actions">
           {user ? (
             <>
+              {/* ADMIN — ONLY VISIBLE TO ADMINS */}
+
               {user.role === 'admin' && (
-                <Link href="/admin" className="ht-btn-ghost" style={{ color: 'var(--gold)' }}>Admin</Link>
+                <Link
+                  href="/admin"
+                  className="ht-btn-ghost"
+                >
+                  Admin
+                </Link>
               )}
-              <Link href="/dashboard" className="ht-btn-ghost">My Bookings</Link>
-              <button onClick={logout} className="ht-btn-primary"><span>Logout</span></button>
+
+              {/* MY BOOKINGS */}
+
+              <Link
+                href="/dashboard"
+                className="ht-btn-ghost"
+              >
+                My Bookings
+              </Link>
+
+              {/* LOGOUT */}
+
+              <button
+                type="button"
+                onClick={logout}
+                className="ht-btn-primary"
+              >
+                <span>
+                  Logout
+                </span>
+              </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="ht-btn-ghost">Login</Link>
-              <Link href="/register" className="ht-btn-primary"><span>Book a Trek</span></Link>
+              {/* LOGIN */}
+
+              <Link
+                href="/login"
+                className="ht-btn-ghost"
+              >
+                Login
+              </Link>
+
+              {/* BOOK A TREK */}
+
+              <Link
+                href="/register"
+                className="ht-btn-primary"
+              >
+                <span>
+                  Book a Trek
+                </span>
+              </Link>
             </>
           )}
         </div>
 
-        {/* Mobile Toggle */}
-        <button className="ht-mobile-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+        {/* ═══════════════════════════════════════════════
+            MOBILE TOGGLE
+        ═══════════════════════════════════════════════ */}
+
+        <button
+          type="button"
+          className="ht-mobile-btn"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-label="Toggle menu"
+          aria-expanded={menuOpen}
+          aria-controls="ht-mobile-menu"
+        >
           {menuOpen ? (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           ) : (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M4 6h16M4 12h16M4 18h10"/>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M4 6h16M4 12h16M4 18h10" />
             </svg>
           )}
         </button>
 
-        {/* Mobile Menu */}
-        <div className={`ht-mobile-menu${menuOpen ? ' open' : ''}`}>
-          <Link href="/treks" onClick={() => setMenuOpen(false)}>Expeditions</Link>
-          <Link href="/treks" onClick={() => setMenuOpen(false)}>Treks</Link>
-          <Link href="/blog" onClick={() => setMenuOpen(false)}>Blog</Link>
-          <Link href="/about" onClick={() => setMenuOpen(false)}>About</Link>
+        {/* ═══════════════════════════════════════════════
+            MOBILE MENU
+        ═══════════════════════════════════════════════ */}
+
+        <div
+          id="ht-mobile-menu"
+          className={`ht-mobile-menu${
+            menuOpen ? ' open' : ''
+          }`}
+        >
+          <Link
+            href="/treks"
+            onClick={() => setMenuOpen(false)}
+          >
+            Expeditions
+          </Link>
+
+          <Link
+            href="/treks"
+            onClick={() => setMenuOpen(false)}
+          >
+            Treks
+          </Link>
+
+          <Link
+            href="/blog"
+            onClick={() => setMenuOpen(false)}
+          >
+            Blog
+          </Link>
+
+          {/* ADMIN — ONLY VISIBLE TO ADMINS */}
+
+          {user?.role === 'admin' && (
+            <Link
+              href="/admin"
+              onClick={() => setMenuOpen(false)}
+            >
+              Admin
+            </Link>
+          )}
+
+          <Link
+            href="/about"
+            onClick={() => setMenuOpen(false)}
+          >
+            About
+          </Link>
+
           {user ? (
             <>
-              <Link href="/dashboard" onClick={() => setMenuOpen(false)}>My Bookings</Link>
-              <button onClick={() => { logout(); setMenuOpen(false); }}>Logout</button>
+              <Link
+                href="/dashboard"
+                onClick={() => setMenuOpen(false)}
+              >
+                My Bookings
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMenuOpen(false);
+                }}
+              >
+                Logout
+              </button>
             </>
           ) : (
             <>
-              <Link href="/login" onClick={() => setMenuOpen(false)}>Login</Link>
-              <Link href="/register" className="ht-mobile-cta" onClick={() => setMenuOpen(false)}>Book a Trek</Link>
+              <Link
+                href="/login"
+                onClick={() => setMenuOpen(false)}
+              >
+                Login
+              </Link>
+
+              <Link
+                href="/register"
+                className="ht-mobile-cta"
+                onClick={() => setMenuOpen(false)}
+              >
+                Book a Trek
+              </Link>
             </>
           )}
         </div>
       </nav>
 
-      {/* ═══ MEGA MENU — EXPEDITIONS ═══ */}
+      {/* ═══════════════════════════════════════════════
+          MEGA MENU — EXPEDITIONS
+      ═══════════════════════════════════════════════ */}
+
       {activeData && (
         <div
-          className={`ht-mega-wrap${megaOpen ? ' open' : ''}`}
-          style={{ top: scrolled ? '80px' : '100px' }}
+          className={`ht-mega-wrap${
+            megaOpen ? ' open' : ''
+          }`}
+          style={{
+            top: scrolled ? '80px' : '100px',
+          }}
           onMouseEnter={openMega}
           onMouseLeave={scheduleClose}
         >
           <div className="ht-mega-inner">
-            {/* LEFT — Categories */}
+
+            {/* ═════════════════════════════════════════
+                LEFT — CATEGORIES
+            ═════════════════════════════════════════ */}
+
             <div className="ht-mega-categories">
-              <span className="ht-mega-col-label">Explore By Region</span>
+              <span className="ht-mega-col-label">
+                Explore By Region
+              </span>
+
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
-                  className={`ht-mega-cat-btn${cat.id === activeData.id ? ' active' : ''}`}
-                  onMouseEnter={() => setActiveCategory(cat.id)}
-                  onFocus={() => setActiveCategory(cat.id)}
+                  className={`ht-mega-cat-btn${
+                    cat.id === activeData.id
+                      ? ' active'
+                      : ''
+                  }`}
+                  onMouseEnter={() =>
+                    setActiveCategory(cat.id)
+                  }
+                  onFocus={() =>
+                    setActiveCategory(cat.id)
+                  }
                 >
                   <span>
-                    <span className="ht-mega-cat-name">{cat.name}</span>
-                    <span className="ht-mega-cat-tagline">{cat.tagline}</span>
+                    <span className="ht-mega-cat-name">
+                      {cat.name}
+                    </span>
+
+                    <span className="ht-mega-cat-tagline">
+                      {cat.tagline}
+                    </span>
                   </span>
-                  <svg className="ht-mega-cat-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+
+                  <svg
+                    className="ht-mega-cat-arrow"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                  >
+                    <path
+                      d="M2 7h10M8 3l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </button>
               ))}
             </div>
 
-            {/* CENTER — Treks for active category */}
+            {/* ═════════════════════════════════════════
+                CENTER — TREKS
+            ═════════════════════════════════════════ */}
+
             <div className="ht-mega-subs">
               <h3 className="ht-mega-subs-heading">
-                <b>{activeData.name}</b> Treks
+                <b>
+                  {activeData.name}
+                </b>{' '}
+                Treks
               </h3>
-              <p className="ht-mega-subs-sub">{activeData.tagline}</p>
+
+              <p className="ht-mega-subs-sub">
+                {activeData.tagline}
+              </p>
 
               {activeLinks.length > 0 ? (
                 <ul className="ht-mega-sub-list">
                   {activeLinks.map((sub) => (
                     <li key={sub.href}>
-                      <Link href={sub.href} onClick={() => setMegaOpen(false)}>
+                      <Link
+                        href={sub.href}
+                        onClick={closeMega}
+                      >
                         {sub.name}
                       </Link>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="ht-mega-empty">New treks in this region coming soon.</p>
+                <p className="ht-mega-empty">
+                  New treks in this region coming soon.
+                </p>
               )}
 
               <Link
                 href={`/treks?region=${activeData.id}`}
                 className="ht-mega-view-all"
-                onClick={() => setMegaOpen(false)}
+                onClick={closeMega}
               >
                 View All {activeData.name} Treks
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                >
+                  <path
+                    d="M2 7h10M8 3l4 4-4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </Link>
             </div>
 
-            {/* RIGHT — Promo Cards */}
+            {/* ═════════════════════════════════════════
+                RIGHT — PROMO CARDS
+            ═════════════════════════════════════════ */}
+
             <div className="ht-mega-promos">
               {(activeData.promos || []).map((promo) => (
                 <Link
                   key={promo.href}
                   href={promo.href}
                   className="ht-mega-promo-card"
-                  onClick={() => setMegaOpen(false)}
+                  onClick={closeMega}
                 >
                   {promo.img ? (
-                    <img className="ht-mega-promo-img" src={promo.img} alt={(promo.name || '').trim()} loading="lazy" />
+                    <img
+                      className="ht-mega-promo-img"
+                      src={promo.img}
+                      alt={(promo.name || '').trim()}
+                      loading="lazy"
+                    />
                   ) : (
                     <div className="ht-mega-promo-fallback" />
                   )}
+
                   <div className="ht-mega-promo-gradient" />
+
                   <div className="ht-mega-promo-body">
                     <div>
-                      <div className="ht-mega-promo-name">{(promo.name || '').trim()}</div>
-                      <span className="ht-mega-promo-sub">{promo.subtitle}</span>
+                      <div className="ht-mega-promo-name">
+                        {(promo.name || '').trim()}
+                      </div>
+
+                      <span className="ht-mega-promo-sub">
+                        {promo.subtitle}
+                      </span>
                     </div>
+
                     <span className="ht-mega-promo-cta">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
+                        <path
+                          d="M2 7h10M8 3l4 4-4 4"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </span>
                   </div>
                 </Link>
               ))}
             </div>
+
           </div>
         </div>
       )}
     </>
   );
 }
+
