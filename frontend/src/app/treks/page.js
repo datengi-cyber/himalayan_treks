@@ -1,11 +1,20 @@
+
+
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import TrekCard from '@/components/TrekCard';
 import api from '@/lib/api';
+import HimalayanExpeditionMap from '@/components/HimalayanExpeditionMap';
 
-const REGIONS = ['Everest', 'Annapurna', 'Langtang'];
+const REGIONS = [
+  { label: 'Everest', value: 'everest' },
+  { label: 'Annapurna', value: 'annapurna' },
+  { label: 'Langtang', value: 'langtang' },
+];
 const DIFFICULTIES = ['easy', 'moderate', 'challenging', 'extreme'];
 const DIFFICULTY_LABELS = { easy: 'Easy', moderate: 'Moderate', challenging: 'Challenging', extreme: 'Extreme' };
+
+const PAGE_LIMIT = 10;
 
 const STATS = [
   { value: '180+', label: 'Curated Routes' },
@@ -16,40 +25,99 @@ const STATS = [
 
 export default function TreksPage() {
   const [treks, setTreks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);       // initial / filter-change load
+  const [loadingMore, setLoadingMore] = useState(false); // "Load More" load
+  const [error, setError] = useState(null);            // initial load error
+  const [loadMoreError, setLoadMoreError] = useState(null); // load-more error
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: PAGE_LIMIT, totalPages: 1 });
   const [filters, setFilters] = useState({ region: '', difficulty: '', search: '' });
   const [heroVisible, setHeroVisible] = useState(false);
   const heroRef = useRef(null);
+
+  // Guards against race conditions: only the most recently issued request
+  // is allowed to update state when it resolves.
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     const t = setTimeout(() => setHeroVisible(true), 80);
     return () => clearTimeout(t);
   }, []);
 
-  const fetchTreks = async () => {
-    setLoading(true);
+  const fetchTreks = useCallback(async (pageNum, { replace = false } = {}) => {
+    const requestId = ++requestIdRef.current;
+
+    if (replace) {
+      setLoading(true);
+      setError(null);
+    } else {
+      setLoadingMore(true);
+      setLoadMoreError(null);
+    }
+
     try {
       const params = new URLSearchParams();
+      params.append('page', String(pageNum));
+      params.append('limit', String(PAGE_LIMIT));
       if (filters.region) params.append('region', filters.region);
       if (filters.difficulty) params.append('difficulty', filters.difficulty);
       if (filters.search) params.append('search', filters.search);
+
       const url = `/treks?${params.toString()}`;
       let res;
       if (typeof api?.get === 'function') res = await api.get(url);
       else if (typeof api?.default?.get === 'function') res = await api.default.get(url);
       else throw new Error('api.get is not a function');
-      setTreks(res.data.data);
+
+      // Stale response from a superseded request — ignore it.
+      if (requestId !== requestIdRef.current) return;
+
+      const newTreks = res.data.data || [];
+      const newPagination = res.data.pagination || {
+        total: newTreks.length,
+        page: pageNum,
+        limit: PAGE_LIMIT,
+        totalPages: pageNum,
+      };
+
+      setTreks(prev => (replace ? newTreks : [...prev, ...newTreks]));
+      setPagination(newPagination);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.error('FETCH ERROR:', err);
+      if (replace) {
+        setError('Unable to load treks right now.');
+        setTreks([]);
+      } else {
+        setLoadMoreError('Unable to load more treks.');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.region, filters.difficulty, filters.search]);
+
+  // Filters/search changing always resets to page 1 and replaces the list.
+  useEffect(() => {
+    fetchTreks(1, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.region, filters.difficulty, filters.search]);
+
+  const handleLoadMore = () => {
+    if (loadingMore || loading) return;
+    fetchTreks(pagination.page + 1, { replace: false });
   };
-  useEffect(() => { fetchTreks(); }, [filters]);
+
+  const hasMore = pagination.page < pagination.totalPages;
+  const totalTreks = pagination.total ?? treks.length;
+  const regionLabel = REGIONS.find(r => r.value === filters.region)?.label;
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600;700&display=swap');
 
         .treks-root {
           background: #ffffff;
@@ -209,33 +277,41 @@ export default function TreksPage() {
           font-weight: 400;
         }
 
+        /* ── LISTING WRAP ─────────────────────── */
+        /* Everything from the filters down to Load More sits on a soft
+           neutral surface with a comfortable, capped reading width. */
+        .listing-surface {
+          background: #F8FAFC;
+        }
+        .listing-inner {
+          max-width: 1320px;
+          margin: 0 auto;
+          padding: 0 24px;
+        }
+
         /* ── FILTERS ─────────────────────────── */
         .filters-section {
-          padding: 52px 6vw 0;
+          padding: 40px 0 0;
           position: relative;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
         }
 
         .filters-header {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
-          margin-bottom: 28px;
+          margin-bottom: 20px;
         }
 
         .filters-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 14px;
-          letter-spacing: 0.2em;
-          font-weight: 1200;
-          text-transform: uppercase;
-          color: rgb(0, 0, 0);
-      
+          font-size: 18px;
+          font-weight: 600;
+          color: #111827;
         }
 
         .trek-count {
           font-size: 14px;
-          color: rgb(0, 0, 0);
-          letter-spacing: 0.05em;
+          color: #64748B;
         }
 
         .filters-row {
@@ -258,58 +334,62 @@ export default function TreksPage() {
           left: 16px;
           top: 50%;
           transform: translateY(-50%);
-          color: rgb(0, 0, 0);
+          color: #94A3B8;
           font-size: 15px;
           pointer-events: none;
         }
 
         .search-input {
           width: 100%;
-          background: rgba(200, 193, 178, 0.69);
-          border: 1px solid rgb(0, 0, 0);
-          color: #000000;
-          font-family: 'Outfit', sans-serif;
+          background: #FFFFFF;
+          border: 1px solid #E5E7EB;
+          color: #111827;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
           font-size: 14px;
           padding: 13px 16px 13px 44px;
           border-radius: 10px;
           outline: none;
-          transition: border-color 0.25s, background 0.25s;
+          transition: border-color 0.2s, box-shadow 0.2s;
           box-sizing: border-box;
         }
-        .search-input::placeholder { color: rgba(200,190,175,0.3); }
+        .search-input::placeholder { color: #94A3B8; }
         .search-input:focus {
-          border-color: rgba(0, 0, 0, 0.35);
-          background: rgba(198,155,80,0.04);
+          border-color: #048BFF;
+          box-shadow: 0 0 0 3px #EAF5FF;
         }
 
         .filter-pill-group {
           display: flex;
-          gap: 6px;
+          gap: 8px;
           flex-wrap: wrap;
         }
 
         .filter-pill {
           padding: 10px 16px;
-          border-radius: 50px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.03);
-          color: rgba(0, 0, 0, 0.55);
-          font-family: 'Outfit', sans-serif;
-          font-size: 12.5px;
+          border-radius: 10px;
+          border: 1px solid #E5E7EB;
+          background: #FFFFFF;
+          color: #334155;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          font-size: 13px;
+          font-weight: 500;
           cursor: pointer;
-          transition: all 0.2s ease;
-          letter-spacing: 0.02em;
+          transition: all 0.15s ease;
           white-space: nowrap;
         }
         .filter-pill:hover {
-          border-color: rgba(198,155,80,0.3);
-          color: rgb(255, 166, 11);
-          background: rgba(198,155,80,0.05);
+          border-color: #048BFF;
+          color: #048BFF;
+          background: #EAF5FF;
         }
         .filter-pill.active {
-          border-color: rgba(198,155,80,0.6);
-          background: rgba(217, 217, 217, 0.12);
-          color: rgb(252, 160, 0);
+          border-color: #048BFF;
+          background: #048BFF;
+          color: #FFFFFF;
+        }
+        .filter-pill:focus-visible {
+          outline: 2px solid #048BFF;
+          outline-offset: 2px;
         }
 
         /* ── ACTIVE FILTERS STRIP ────────────── */
@@ -317,28 +397,28 @@ export default function TreksPage() {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 18px 6vw 0;
+          padding: 16px 0 0;
           flex-wrap: wrap;
           min-height: 0;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
         }
 
         .active-tag {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 5px 12px 5px 14px;
-          background: rgba(0, 0, 0, 0.1);
-          border: 1px solid rgb(0, 0, 0);
-          border-radius: 50px;
-          font-size: 12px;
-          color: rgba(248, 157, 0, 0.9);
-          font-family: 'Outfit', sans-serif;
+          padding: 5px 10px 5px 14px;
+          background: #EAF5FF;
+          border: 1px solid #BFE0FF;
+          border-radius: 999px;
+          font-size: 12.5px;
+          color: #0369A1;
         }
 
         .active-tag button {
           background: none;
           border: none;
-          color: rgba(198,155,80,0.6);
+          color: #048BFF;
           cursor: pointer;
           font-size: 14px;
           line-height: 1;
@@ -347,73 +427,81 @@ export default function TreksPage() {
           align-items: center;
           transition: color 0.2s;
         }
-        .active-tag button:hover { color: rgba(198,155,80,1); }
+        .active-tag button:hover { color: #0078E6; }
 
         .clear-all {
           background: none;
           border: none;
-          color: rgb(0, 0, 0);
+          color: #64748B;
           cursor: pointer;
-          font-family: 'Outfit', sans-serif;
-          font-size: 12px;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          font-size: 12.5px;
           padding: 5px 10px;
           transition: color 0.2s;
-          letter-spacing: 0.03em;
         }
-        .clear-all:hover { color: rgba(200,190,175,0.6); }
+        .clear-all:hover { color: #111827; }
 
         /* ── DIVIDER ─────────────────────────── */
         .section-divider {
-          margin: 40px 6vw 0;
+          margin: 32px 0 0;
           height: 1px;
-          background: linear-gradient(90deg, rgba(198,155,80,0.2), rgba(255,255,255,0.04) 70%, transparent);
+          background: #E5E7EB;
         }
 
         /* ── GRID ────────────────────────────── */
         .grid-section {
-          padding: 44px 6vw 100px;
+          padding: 32px 0 80px;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
         }
 
         .grid-label {
-          font-size: 10px;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          color: rgb(0, 0, 0);
-          margin-bottom: 28px;
+          font-size: 14px;
+          color: #64748B;
+          margin-bottom: 20px;
           font-weight: 400;
         }
 
         .treks-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          grid-template-columns: 1fr;
           gap: 24px;
           align-items: stretch;
+        }
+        @media (min-width: 768px) {
+          .treks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (min-width: 1100px) {
+          .treks-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
 
         /* ── SKELETON ────────────────────────── */
         .skeleton-card {
-          border-radius: 16px;
+          border-radius: 20px;
           overflow: hidden;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.05);
+          background: #FFFFFF;
+          border: 1px solid #E5E7EB;
+          box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
         }
 
         .skeleton-img {
-          height: 220px;
-          background: linear-gradient(100deg, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.065) 50%, rgba(255,255,255,0.03) 70%);
+          aspect-ratio: 16 / 9;
+          background: linear-gradient(100deg, #EEF2F7 30%, #E2E8F0 50%, #EEF2F7 70%);
           background-size: 200% 100%;
           animation: shimmer 1.6s infinite;
         }
 
-        .skeleton-body { padding: 20px; }
+        .skeleton-body { padding: 18px 20px 20px; }
 
         .skeleton-line {
           height: 12px;
           border-radius: 6px;
-          background: linear-gradient(100deg, rgba(255,255,255,0.04) 30%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 70%);
+          background: linear-gradient(100deg, #EEF2F7 30%, #E2E8F0 50%, #EEF2F7 70%);
           background-size: 200% 100%;
           animation: shimmer 1.6s infinite;
           margin-bottom: 10px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .skeleton-img, .skeleton-line { animation: none; }
         }
 
         @keyframes shimmer {
@@ -425,37 +513,147 @@ export default function TreksPage() {
         .empty-state {
           text-align: center;
           padding: 100px 20px;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
         }
 
         .empty-icon {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 64px;
-          color: rgba(198,155,80,0.15);
-          margin-bottom: 24px;
+          font-size: 40px;
+          color: #CBD5E1;
+          margin-bottom: 16px;
           display: block;
-          font-weight: 300;
-          font-style: italic;
         }
 
         .empty-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 28px;
-          font-weight: 300;
-          color: rgba(224,212,192,0.5);
-          margin-bottom: 10px;
+          font-size: 20px;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 8px;
         }
 
         .empty-sub {
-          font-size: 13px;
-          color: rgba(200,190,175,0.3);
-          letter-spacing: 0.04em;
+          font-size: 13.5px;
+          color: #64748B;
         }
 
-        /* ── TREK CARD OVERRIDES ─────────────── */
-        /* These let TrekCard inherit the dark theme */
-        .treks-grid > * {
-          --card-bg: rgba(12,17,24,0.8);
-          --card-border: rgba(255,255,255,0.06);
+        /* ── ERROR STATE ─────────────────────── */
+        .error-state {
+          text-align: center;
+          padding: 100px 20px;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        }
+
+        .error-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 12px;
+        }
+
+        .retry-btn {
+          height: 44px;
+          padding: 0 24px;
+          border-radius: 11px;
+          border: none;
+          background: #048BFF;
+          color: #FFFFFF;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          font-size: 13.5px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+        .retry-btn:hover { background: #0078E6; }
+        .retry-btn:focus-visible {
+          outline: 2px solid #048BFF;
+          outline-offset: 2px;
+        }
+
+        /* ── LOAD MORE SECTION ───────────────── */
+        .load-more-section {
+          margin-top: 48px;
+          padding-top: 32px;
+          border-top: 1px solid #E5E7EB;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          text-align: center;
+        }
+
+        .load-more-count {
+          font-size: 14px;
+          color: #64748B;
+        }
+
+        .load-more-btn {
+          height: 50px;
+          min-width: 200px;
+          padding: 0 32px;
+          border: none;
+          border-radius: 13px;
+          background: #048BFF;
+          color: #FFFFFF;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.15s ease, transform 0.1s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        }
+        .load-more-btn:hover:not(:disabled) {
+          background: #0078E6;
+        }
+        .load-more-btn:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        .load-more-btn:disabled {
+          cursor: default;
+          opacity: 0.85;
+        }
+        .load-more-btn:focus-visible {
+          outline: 2px solid #048BFF;
+          outline-offset: 2px;
+        }
+
+        .load-more-spinner {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          border: 2px solid rgba(255,255,255,0.4);
+          border-top-color: #FFFFFF;
+          animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .load-more-spinner { animation: none; }
+        }
+
+        .load-more-error {
+          font-size: 13.5px;
+          color: #B91C1C;
+        }
+
+        .load-more-retry {
+          background: none;
+          border: none;
+          text-decoration: underline;
+          cursor: pointer;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: #048BFF;
+          margin-left: 6px;
+        }
+
+        .end-message {
+          font-size: 14px;
+          color: #94A3B8;
         }
       `}</style>
 
@@ -465,20 +663,7 @@ export default function TreksPage() {
         <div className="hero" ref={heroRef}>
           <div className="hero-bg" />
 
-          {/* Minimal SVG mountains */}
-          <div className="hero-mountains">
-            <svg viewBox="0 0 1440 420" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
-              {/* far range */}
-              <polygon points="0,420 0,280 180,140 320,240 500,90 640,200 780,60 920,180 1080,100 1220,210 1440,120 1440,420" fill="rgba(20,35,55,0.45)" />
-              {/* mid range */}
-              <polygon points="0,420 0,340 120,260 260,310 400,200 560,280 700,160 860,250 1000,180 1160,270 1300,200 1440,260 1440,420" fill="rgba(14,25,40,0.6)" />
-              {/* near ridge */}
-              <polygon points="0,420 0,380 200,340 380,360 540,300 700,350 860,310 1020,360 1200,320 1440,360 1440,420" fill="rgba(10,16,24,0.85)" />
-              {/* golden peak accent */}
-              <polygon points="780,60 820,130 740,130" fill="rgba(198,155,80,0.12)" />
-              <line x1="780" y1="60" x2="780" y2="0" stroke="rgba(198,155,80,0.06)" strokeWidth="1" />
-            </svg>
-          </div>
+          <HimalayanExpeditionMap treks={treks} />
 
           <div className="hero-grain" />
           <div className="hero-line" />
@@ -508,12 +693,16 @@ export default function TreksPage() {
           ))}
         </div>
 
+        {/* ── LISTING (filters + grid + load more) ── */}
+        <div className="listing-surface">
+        <div className="listing-inner">
+
         {/* ── FILTERS ── */}
         <div className="filters-section">
           <div className="filters-header">
-            <span className="filters-title">Explore Routes</span>
-            {!loading && (
-              <span className="trek-count">{treks.length} expeditions found</span>
+            <span className="filters-title">Explore routes</span>
+            {!loading && !error && (
+              <span className="trek-count">{totalTreks} treks available</span>
             )}
           </div>
 
@@ -526,7 +715,7 @@ export default function TreksPage() {
               <input
                 type="text"
                 className="search-input"
-                placeholder="Search by name, region, altitude…"
+                placeholder="Search treks by name or destination…"
                 value={filters.search}
                 onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
               />
@@ -535,11 +724,11 @@ export default function TreksPage() {
             <div className="filter-pill-group">
               {REGIONS.map(r => (
                 <button
-                  key={r}
-                  className={`filter-pill ${filters.region === r ? 'active' : ''}`}
-                  onClick={() => setFilters(f => ({ ...f, region: f.region === r ? '' : r }))}
+                  key={r.value}
+                  className={`filter-pill ${filters.region === r.value ? 'active' : ''}`}
+                  onClick={() => setFilters(f => ({ ...f, region: f.region === r.value ? '' : r.value }))}
                 >
-                  {r}
+                  {r.label}
                 </button>
               ))}
             </div>
@@ -563,7 +752,7 @@ export default function TreksPage() {
           <div className="active-filters">
             {filters.region && (
               <div className="active-tag">
-                {filters.region}
+                {regionLabel}
                 <button onClick={() => setFilters(f => ({ ...f, region: '' }))} aria-label="Remove region filter">×</button>
               </div>
             )}
@@ -605,13 +794,56 @@ export default function TreksPage() {
                 ))}
               </div>
             </>
+          ) : error ? (
+            <div className="error-state">
+              <div className="error-title">Something went wrong</div>
+              <p className="empty-sub" style={{ marginBottom: 24 }}>{error}</p>
+              <button className="retry-btn" onClick={() => fetchTreks(1, { replace: true })}>
+                Try Again
+              </button>
+            </div>
           ) : treks.length > 0 ? (
             <>
-              <div className="grid-label">{treks.length} Expeditions Available</div>
+              <div className="grid-label">Showing {treks.length} of {totalTreks} expeditions</div>
               <div className="treks-grid">
                 {treks.map(trek => (
                   <TrekCard key={trek.id} trek={trek} />
                 ))}
+              </div>
+
+              <div className="load-more-section">
+                <div className="load-more-count">
+                  {!hasMore
+                    ? `Showing all ${totalTreks} treks`
+                    : `Showing ${treks.length} of ${totalTreks} treks`}
+                </div>
+
+                {loadMoreError && (
+                  <div className="load-more-error">
+                    {loadMoreError}
+                    <button
+                      className="load-more-retry"
+                      onClick={() => fetchTreks(pagination.page + 1, { replace: false })}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                )}
+
+                {hasMore ? (
+                  <button
+                    className="load-more-btn"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore && <span className="load-more-spinner" />}
+                    {loadingMore ? 'Loading more treks…' : 'Load More Treks'}
+                  </button>
+                ) : (
+                  !loadMoreError && (
+                    <div className="end-message">You've explored all available treks.</div>
+                  )
+                )}
               </div>
             </>
           ) : (
@@ -621,6 +853,9 @@ export default function TreksPage() {
               <p className="empty-sub">Adjust your filters to discover more expeditions</p>
             </div>
           )}
+        </div>
+
+        </div>
         </div>
 
       </div>

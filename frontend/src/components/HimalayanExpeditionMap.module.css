@@ -1,0 +1,215 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Locked to the SVG's own aspect ratio and bottom-anchored, so this box
+   is pixel-identical to the rendered mountain art — the label layer
+   below shares these exact coordinates. */
+.stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── mountain line art ───────────────────── */
+.peakLine {
+  fill: none;
+  stroke: rgba(224, 212, 192, 0.32);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition: stroke 250ms ease, filter 250ms ease;
+}
+
+.peakLineActive {
+  stroke: rgba(198, 155, 80, 0.95);
+  filter: drop-shadow(0 0 6px rgba(198, 155, 80, 0.45));
+}
+
+.peakLineHighlight {
+  stroke: rgba(224, 212, 192, 0.5);
+}
+
+.texture {
+  stroke: rgba(224, 212, 192, 0.08);
+  stroke-width: 1;
+  fill: none;
+}
+
+.highlightFill {
+  fill: rgba(198, 155, 80, 0.1);
+  stroke: none;
+}
+
+.vein {
+  fill: none;
+  stroke: rgba(198, 155, 80, 0.55);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+/* ── labels ──────────────────────────────── */
+.labelLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.peak {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgba(200, 190, 175, 0.55);
+}
+
+.peakMirrored {
+  align-items: flex-end;
+  transform: translateX(-100%);
+}
+
+.peak:disabled {
+  cursor: default;
+}
+
+.peak:focus-visible {
+  outline: 2px solid rgba(198, 155, 80, 0.9);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+.peakName {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: inherit;
+  white-space: nowrap;
+  transition: color 220ms ease;
+}
+
+.peakAlt {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 12.5px;
+  color: rgba(200, 190, 175, 0.4);
+  white-space: nowrap;
+  transition: color 220ms ease;
+}
+
+.tick {
+  position: relative;
+  flex: 1 1 auto;
+  width: 1px;
+  min-height: 8px;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.tick::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 1px;
+  background: currentColor;
+}
+
+.peak:not(.peakMirrored) .tick::before {
+  left: 0;
+}
+
+.peakMirrored .tick::before {
+  right: 0;
+}
+
+.peak:hover,
+.peak:focus-visible,
+.peakHover {
+  color: #e9c98a;
+}
+
+.peak:hover .peakAlt,
+.peak:focus-visible .peakAlt,
+.peakHover .peakAlt {
+  color: rgba(233, 201, 138, 0.7);
+}
+
+.peakHighlight .peakName {
+  color: #e9c98a;
+}
+
+.peakHighlight .peakAlt {
+  color: rgba(233, 201, 138, 0.65);
+}
+
+/* ── compass rose ────────────────────────── */
+.compass {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 34px;
+  height: 34px;
+  z-index: 2;
+  opacity: 0.8;
+}
+
+.compassArrow {
+  fill: rgba(198, 155, 80, 0.85);
+}
+
+.compassLabel {
+  font-family: 'Outfit', sans-serif;
+  font-size: 7px;
+  font-weight: 600;
+  fill: rgba(224, 212, 192, 0.7);
+}
+
+/* ── responsive ──────────────────────────── */
+@media (max-width: 640px) {
+  .peakName {
+    font-size: 9.5px;
+  }
+  .peakAlt {
+    display: none;
+  }
+  .compass {
+    width: 26px;
+    height: 26px;
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
+/* ── reduced motion ──────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .peakLine,
+  .peakName,
+  .peakAlt {
+    transition: none;
+  }
+}
