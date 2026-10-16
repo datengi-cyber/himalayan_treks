@@ -5,7 +5,8 @@ import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 
 export const metadata = {
-  metadataBase: new URL('https://www.himalayatreks.com'),
+  // metadataBase: new URL('https://www.himalayatreks.com'),
+  metadataBase: new URL('https://himalayan-legacy.vercel.app'),
 
   verification: {
     google: 'Zj0nvSWyL3ch19JsW0YCZDmk2KV5LZMa4wEM7dd019c',
