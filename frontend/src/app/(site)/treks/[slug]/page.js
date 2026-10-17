@@ -22,17 +22,59 @@ async function getTrek(slug) {
   }
 }
 
+// export async function generateMetadata({ params }) {
+//   const { slug } = await params;
+//   const trek = await getTrek(slug);
+//   if (!trek) return { title: 'Trek Not Found' };
+//   return {
+//     title: trek.meta_title || `${trek.title} | Himalaya Treks`,
+//     description: trek.meta_description || trek.description?.slice(0, 160),
+//   };
+// }
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const trek = await getTrek(slug);
-  if (!trek) return { title: 'Trek Not Found' };
+
+  if (!trek) {
+    return {
+      title: 'Trek Not Found',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const canonicalUrl =
+    `https://himalayan-legacy.vercel.app/treks/${slug}`;
+
   return {
     title: trek.meta_title || `${trek.title} | Himalaya Treks`,
-    description: trek.meta_description || trek.description?.slice(0, 160),
+    description:
+      trek.meta_description ||
+      trek.description?.slice(0, 160) ||
+      `Discover ${trek.title} with Himalaya Treks.`,
+
+    alternates: {
+      canonical: canonicalUrl,
+    },
+
+    openGraph: {
+      title: trek.meta_title || `${trek.title} | Himalaya Treks`,
+      description:
+        trek.meta_description ||
+        trek.description?.slice(0, 160) ||
+        `Discover ${trek.title} with Himalaya Treks.`,
+      url: canonicalUrl,
+      siteName: 'Himalaya Treks',
+      type: 'website',
+    },
   };
 }
 
-function buildTrekSchema(trek, siteUrl = 'https://www.himalayatreks.com') {
+
+function buildTrekSchema(trek, siteUrl = 'https://himalayan-legacy.vercel.app') {
   return {
     '@context': 'https://schema.org',
     '@type': 'TouristTrip',
