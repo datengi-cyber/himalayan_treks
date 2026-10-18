@@ -10,15 +10,19 @@ export const metadata = {
   },
 
 
-  verification: {
-    google: 'Zj0nvSWyL3ch19JsW0YCZDmk2KV5LZMa4wEM7dd019c',
-  },
-
-
   title: {
     default: 'Himalaya Treks | Nepal Trekking & Tour Packages',
     template: '%s | Himalaya Treks',
   },
+
+  applicationName: 'Himalaya Treks',
+
+  icons: {
+    icon: '/newLOgofor-removebg-preview.webp',
+    shortcut: '/newLOgofor-removebg-preview.webp',
+    apple: '/newLOgofor-removebg-preview.webp',
+  },
+
 
   description:
     'Book world-class treks in Nepal — Everest Base Camp, Annapurna Circuit, Langtang Valley and more.',

@@ -103,7 +103,7 @@ export default async function BlogPostPage({ params }) {
     publisher: {
       '@type': 'Organization',
       name: 'Himalaya Treks',
-      logo: { '@type': 'ImageObject', url: 'https://himalayan-legacy.vercel.app/logo.png' }
+      logo: { '@type': 'ImageObject', url: 'https://himalayan-legacy.vercel.app/newLOgofor-removebg-preview.webp' }
     }
   };
 

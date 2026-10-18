@@ -1,12 +1,20 @@
 
 import Link from 'next/link';
 import TrekCard from '@/components/TrekCard';
+import JsonLd from '@/components/JsonLd';
 import './home.css';
 
 export const metadata = {
   title: 'Himalaya Treks | Nepal Trekking Packages & Tours',
   description:
     'Book iconic Nepal treks — Everest Base Camp, Annapurna Circuit, Langtang Valley. Expert guides, small groups, unbeatable prices.',
+};
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Himalaya Treks',
+  alternateName: 'Himalaya Legacy',
+  url: 'https://himalayan-legacy.vercel.app/',
 };
 export const dynamic = 'force-dynamic';
 // ─── Data helpers ───
@@ -134,6 +142,7 @@ export default async function HomePage() {
 
   return (
     <>
+    <JsonLd data={websiteSchema} />
       {/* HERO */}
       <section className="hero">
         <video
