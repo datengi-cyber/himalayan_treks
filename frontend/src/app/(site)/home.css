@@ -114,7 +114,7 @@ body { font-family: var(--font-body); background: var(--snow); }
 .btn-outline:hover { background: var(--gold); color: var(--slate); }
 
 /* ── By the numbers ── */
-.numbers-section { position: relative; background: url('/background-image12.png') center / cover no-repeat; padding-bottom: 5rem; overflow: hidden; }
+.numbers-section { position: relative; background: url('/background image12.webp') center / cover no-repeat; padding-bottom: 5rem; overflow: hidden; }
 .numbers-section::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,.55); }
 .numbers-section::after { content: ''; position: absolute; inset: 0 0 auto; height: 220px; background: linear-gradient(#fff, transparent); }
 .numbers-inner { position: relative; z-index: 2; display: flex; align-items: flex-start; padding: 5rem 6rem 0; }

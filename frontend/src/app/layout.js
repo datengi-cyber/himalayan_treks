@@ -1,12 +1,14 @@
-
-
-
 import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 
 export const metadata = {
   // metadataBase: new URL('https://www.himalayatreks.com'),
   metadataBase: new URL('https://himalayan-legacy.vercel.app'),
+
+  verification: {
+    google: 'Zj0nvSWyL3ch19JsW0YCZDmk2KV5LZMa4wEM7dd019c',
+  },
+
 
   verification: {
     google: 'Zj0nvSWyL3ch19JsW0YCZDmk2KV5LZMa4wEM7dd019c',
@@ -35,13 +37,13 @@ export const metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.himalayatreks.com',
+    url: 'https://himalayan-legacy.vercel.app',
     siteName: 'Himalaya Treks',
     title: 'Himalaya Treks | Nepal Trekking & Tour Packages',
     description: 'Book world-class trekking adventures in Nepal.',
     images: [
       {
-        url: 'https://www.himalayatreks.com/og-image.jpg',
+        url: 'https://himalayan-legacy.vercel.app/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'Himalaya Treks - Nepal Trekking',
@@ -53,7 +55,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Himalaya Treks | Nepal Trekking',
     description: 'Book world-class treks in Nepal.',
-    images: ['https://www.himalayatreks.com/og-image.jpg'],
+    images: ['https://himalayan-legacy.vercel.app/og-image.jpg'],
   },
 
   robots: {

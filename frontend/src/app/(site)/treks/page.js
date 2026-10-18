@@ -126,55 +126,34 @@ export default function TreksPage() {
           color: #070707;
           overflow-x: hidden;
         }
+
+        /* ── HERO ─────────────────────────────
+           Light, flat, line-art mountain skyline — same idea as a
+           classic peak-elevation infographic, not a cinematic banner. */
         .hero {
           position: relative;
-          height: 88vh;
-          min-height: 600px;
+          height: 46vh;
+          min-height: 380px;
+          max-height: 480px;
           display: flex;
           flex-direction: column;
-          justify-content: flex-end;
-          padding: 0 6vw 72px;
+          justify-content: flex-start;
+          padding: 40px 6vw 0;
           overflow: hidden;
         }
 
         .hero-bg {
           position: absolute;
           inset: 0;
-          background:
-            radial-gradient(ellipse 120% 60% at 60% 40%, rgba(180,130,60,0.10) 0%, transparent 55%),
-            radial-gradient(ellipse 80% 80% at 20% 80%, rgba(30,60,90,0.35) 0%, transparent 60%),
-            linear-gradient(175deg, #0d1520 0%, #080c10 55%, #060a0e 100%);
+          background: linear-gradient(180deg, #F3F6FA 0%, #FBFCFE 65%, #FFFFFF 100%);
           z-index: 0;
-        }
-
-        .hero-mountains {
-          position: absolute;
-          inset: 0;
-          z-index: 1;
-          overflow: hidden;
-        }
-
-        .hero-mountains svg {
-          position: absolute;
-          bottom: 0;
-          width: 100%;
-          height: auto;
-        }
-
-        .hero-grain {
-          position: absolute;
-          inset: 0;
-          z-index: 2;
-          opacity: 0.035;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-          background-size: 128px;
         }
 
         .hero-line {
           position: absolute;
           top: 0; left: 0; right: 0;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(198,155,80,0.4) 40%, rgba(198,155,80,0.4) 60%, transparent);
+          background: linear-gradient(90deg, transparent, rgba(4,139,255,0.25) 40%, rgba(4,139,255,0.25) 60%, transparent);
           z-index: 10;
         }
 
@@ -183,8 +162,8 @@ export default function TreksPage() {
           z-index: 10;
           max-width: 780px;
           opacity: 0;
-          transform: translateY(28px);
-          transition: opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1);
+          transform: translateY(20px);
+          transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
         }
         .hero-content.visible { opacity: 1; transform: translateY(0); }
 
@@ -192,49 +171,34 @@ export default function TreksPage() {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin-bottom: 24px;
+          margin-bottom: 14px;
           opacity: 0;
-          transform: translateY(12px);
-          transition: opacity 0.7s 0.15s ease, transform 0.7s 0.15s ease;
+          transform: translateY(10px);
+          transition: opacity 0.6s 0.1s ease, transform 0.6s 0.1s ease;
         }
         .hero-eyebrow.visible { opacity: 1; transform: translateY(0); }
 
         .eyebrow-line {
-          width: 40px; height: 1px;
-          background: linear-gradient(90deg, rgba(198,155,80,0.8), rgba(198,155,80,0.2));
+          width: 32px; height: 1px;
+          background: linear-gradient(90deg, rgba(4,139,255,0.7), rgba(4,139,255,0.15));
         }
 
         .eyebrow-text {
           font-size: 11px;
-          letter-spacing: 0.22em;
+          letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: rgba(198,155,80,0.85);
-          font-weight: 500;
+          color: #048BFF;
+          font-weight: 600;
         }
 
         .hero-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-weight: 300;
-          font-size: clamp(52px, 7vw, 96px);
-          line-height: 0.95;
+          font-family: 'Outfit', sans-serif;
+          font-weight: 600;
+          font-size: clamp(28px, 3.4vw, 42px);
+          line-height: 1.1;
           letter-spacing: -0.01em;
-          color: #f0e8d8;
-          margin: 0 0 8px;
-        }
-
-        .hero-title em {
-          font-style: italic;
-          color: rgba(198,155,80,0.9);
-        }
-
-        .hero-subtitle {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(18px, 2.2vw, 28px);
-          font-weight: 300;
-          font-style: italic;
-          color: rgba(224,212,192,0.55);
-          margin: 16px 0 0;
-          letter-spacing: 0.01em;
+          color: #0F172A;
+          margin: 0;
         }
 
         /* ── STATS BAR ──────────────────────── */
@@ -243,28 +207,27 @@ export default function TreksPage() {
           z-index: 20;
           display: flex;
           gap: 0;
-          border-top: 1px solid rgba(198,155,80,0.15);
-          border-bottom: 1px solid rgba(255,255,255,0.05);
-          background: rgba(12,17,24,0.95);
-          backdrop-filter: blur(12px);
+          border-top: 1px solid #E5E7EB;
+          border-bottom: 1px solid #E5E7EB;
+          background: #FFFFFF;
           overflow: hidden;
         }
 
         .stat-item {
           flex: 1;
-          padding: 22px 0;
+          padding: 20px 0;
           text-align: center;
-          border-right: 1px solid rgba(255,255,255,0.05);
+          border-right: 1px solid #E5E7EB;
           transition: background 0.3s ease;
         }
         .stat-item:last-child { border-right: none; }
-        .stat-item:hover { background: rgba(198,155,80,0.04); }
+        .stat-item:hover { background: #F8FAFC; }
 
         .stat-value {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 26px;
-          font-weight: 400;
-          color: rgba(198,155,80,0.92);
+          font-family: 'Outfit', sans-serif;
+          font-size: 22px;
+          font-weight: 600;
+          color: #048BFF;
           line-height: 1;
           margin-bottom: 4px;
         }
@@ -273,8 +236,8 @@ export default function TreksPage() {
           font-size: 10px;
           letter-spacing: 0.14em;
           text-transform: uppercase;
-          color: rgba(200,190,175,0.4);
-          font-weight: 400;
+          color: #64748B;
+          font-weight: 500;
         }
 
         /* ── LISTING WRAP ─────────────────────── */
@@ -665,7 +628,6 @@ export default function TreksPage() {
 
           <HimalayanExpeditionMap treks={treks} />
 
-          <div className="hero-grain" />
           <div className="hero-line" />
 
           <div className={`hero-content ${heroVisible ? 'visible' : ''}`}>
@@ -673,13 +635,7 @@ export default function TreksPage() {
               <div className="eyebrow-line" />
               <span className="eyebrow-text">Nepal · Himalayan Expeditions</span>
             </div>
-            <h1 className="hero-title">
-              Where Earth<br />
-              Meets <em>Sky</em>
-            </h1>
-            <p className="hero-subtitle">
-              Handcrafted journeys through the world's highest kingdom
-            </p>
+            <h1 className="hero-title">Explore Our Treks</h1>
           </div>
         </div>
 

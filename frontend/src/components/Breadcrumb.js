@@ -11,7 +11,7 @@ export default function Breadcrumb({ items }) {
       position: index + 1,
       name: item.label,
       ...(item.href && {
-        item: `https://www.himalayatreks.com${item.href}`,
+        item: `https://himalayan-legacy.vercel.app${item.href}`,
       }),
     })),
   };

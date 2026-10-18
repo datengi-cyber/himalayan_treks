@@ -5,8 +5,8 @@ const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'TravelAgency',
   name: 'Himalaya Treks',
-  url: 'https://www.himalayatreks.com',
-  logo: 'https://www.himalayatreks.com/logo.png',
+  url: 'https://himalayan-legacy.vercel.app',
+  logo: 'https://himalayan-legacy.vercel.app/logo.png',
   description:
     'Nepal trekking company offering Everest, Annapurna and Langtang treks.',
   address: {

@@ -1275,7 +1275,7 @@ export default function Navbar() {
 
         <Link href="/" className="ht-logo">
           <Image
-            src="/newLOgofor-removebg-preview.png"
+            src="/newLOgofor-removebg-preview.webp"
             alt="Himalaya Legacy Logo"
             width={100}
             height={100}

@@ -7,6 +7,6 @@ export default function robots() {
         disallow: ['/dashboard', '/admin', '/api/'],
       },
     ],
-    sitemap: 'https://www.himalayatreks.com/sitemap.xml',
+    sitemap: 'https://himalayan-legacy.vercel.app/sitemap.xml',
   };
 }
