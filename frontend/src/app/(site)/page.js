@@ -153,7 +153,7 @@ export default async function HomePage() {
     src="https://res.cloudinary.com/dpziskudt/video/upload/w_1280/q_auto/f_auto/v1778763341/mixkit-fog-on-the-heights-of-the-snowy-mountains-4396-full-hd_slhawq.mp4"
     type="video/mp4"
   />
-</video>
+</>
         <div className="hero-overlay" />
         <div className="hero-scroll fade" style={{ '--d': '1.3s' }}><span>Scroll</span><i /></div>
 
