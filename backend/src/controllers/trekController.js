@@ -350,21 +350,48 @@ const getTrekById = async (req, res, next) => {
   }
 };
 
-// ============================================
-// GET /api/treks/homepage  — public
-// ============================================
+// // ============================================
+// // GET /api/treks/homepage  — public
+// // ============================================
+// const getHomepageTrek = async (req, res, next) => {
+//   try {
+//     // ORDER/LIMIT is a defensive fallback; updateTrek guarantees at most one
+//     // row has is_homepage = TRUE, but this keeps the endpoint safe regardless.
+//     const result = await pool.query(
+//       `SELECT t.*, r.name AS region_name, r.slug AS region_slug
+//        FROM treks t
+//        LEFT JOIN regions r ON r.id = t.region_id
+//        WHERE t.is_homepage = TRUE
+//        ORDER BY t.updated_at DESC
+//        LIMIT 1`
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       data: result.rows[0] || null,
+//     });
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
+
+ // ============================================
+ // GET /api/treks/homepage — public
+ // ============================================
 const getHomepageTrek = async (req, res, next) => {
   try {
-    // ORDER/LIMIT is a defensive fallback; updateTrek guarantees at most one
-    // row has is_homepage = TRUE, but this keeps the endpoint safe regardless.
-    const result = await pool.query(
-      `SELECT t.*, r.name AS region_name, r.slug AS region_slug
-       FROM treks t
-       LEFT JOIN regions r ON r.id = t.region_id
-       WHERE t.is_homepage = TRUE
-       ORDER BY t.updated_at DESC
-       LIMIT 1`
-    );
+    const result = await pool.query(`
+      SELECT
+        t.*,
+        r.name AS region_name,
+        r.slug AS region_slug
+      FROM treks AS t
+      LEFT JOIN regions AS r
+        ON r.id = t.region_id
+      WHERE t.is_homepage = TRUE
+      LIMIT 1
+    `);
 
     res.status(200).json({
       success: true,
@@ -374,6 +401,7 @@ const getHomepageTrek = async (req, res, next) => {
     next(err);
   }
 };
+
 
 // ============================================
 // POST /api/treks/:id/images  (Admin — add a gallery image after creation)
